@@ -40,14 +40,13 @@ export default function EditAppointmentModal({ visible, appointment, onCancel, o
 
     setLoading(true);
     try {
-      const response = await fetch('/api/appointments', {
+      const response = await fetch(`/api/appointments/${appointment.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           ...values,
-          id: appointment.id,
           appointment_time: values.appointment_time.toISOString(),
         }),
       });

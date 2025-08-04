@@ -28,11 +28,11 @@
 
 /* 自定义页面布局样式 */
 .page-header {
-  @apply mb-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100;
+  @apply mb-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100;
 }
 
 .page-title {
-  @apply text-2xl font-bold text-gray-900 mb-2;
+  @apply text-2xl font-bold text-gray-900 mb-1;
 }
 
 .page-description {
@@ -40,15 +40,15 @@
 }
 
 .filter-panel {
-  @apply mb-6 bg-white rounded-xl shadow-sm border border-gray-100;
+  @apply mb-4 bg-white rounded-xl shadow-sm border border-gray-100;
 }
 
 .filter-panel .ant-card-body {
-  @apply p-6;
+  @apply p-4;
 }
 
 .stats-panel {
-  @apply mb-6;
+  @apply mb-4;
 }
 
 /* 统计卡片增强样式 */
@@ -183,7 +183,7 @@
 
 @media (max-width: 768px) {
   .page-header {
-    @apply p-4;
+    @apply p-3;
   }
   
   .page-header .flex {
@@ -191,7 +191,7 @@
   }
   
   .filter-panel .ant-card-body {
-    @apply p-4;
+    @apply p-3;
   }
   
   .ant-table-container {
@@ -253,7 +253,7 @@
 
 /* 内容间距优化 */
 .content-spacing {
-  @apply space-y-6;
+  @apply space-y-4;
 }
 
 /* 表单标签优化 */

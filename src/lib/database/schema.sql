@@ -24,16 +24,19 @@ CREATE TABLE IF NOT EXISTS customers (
 
 -- 带看记录表
 CREATE TABLE IF NOT EXISTS viewing_records (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,  -- 编号
   customer_id INTEGER NOT NULL,          -- 客户ID (外键)
-  business_type TEXT NOT NULL,           -- 业务类型
-  room_type TEXT NOT NULL,               -- 房型
-  room_tag TEXT,                         -- 房型标签 (单个)
+  viewing_time DATETIME NOT NULL,        -- 带看时间
+  property_name TEXT NOT NULL,           -- 带看楼盘
+  property_address TEXT,                 -- 楼盘地址
+  room_type TEXT NOT NULL,               -- 带看户型
+  room_tag TEXT,                         -- 房型标签
   viewer_name TEXT NOT NULL,             -- 带看人
   viewer_type TEXT NOT NULL,             -- 带看人类型 (internal, external, external_sales, creator)
   viewing_status INTEGER NOT NULL DEFAULT 1, -- 带看状态 (1=待确认, 2=已确认, 3=已取消, 4=已带看)
+  commission DECIMAL(10,2) DEFAULT 0,    -- 带看佣金
   viewing_feedback INTEGER,              -- 带看反馈 (0=未成交, 1=已成交)
-  commission DECIMAL(10,2) DEFAULT 0,    -- 佣金
+  business_type TEXT NOT NULL,           -- 业务类型
   notes TEXT,                           -- 备注
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,

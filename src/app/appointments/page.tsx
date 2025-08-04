@@ -170,12 +170,6 @@ export default function AppointmentsPage() {
                             <div><strong>类型：</strong>{BUSINESS_TYPE_TEXT[appointment.type]}</div>
                         </Col>
                         <Col span={12}>
-                            <div><strong>城市：</strong>{appointment.city || '未设置'}</div>
-                        </Col>
-                        <Col span={12}>
-                            <div><strong>是否已转化：</strong>{appointment.is_converted ? '是' : '否'}</div>
-                        </Col>
-                        <Col span={12}>
                             <div><strong>创建时间：</strong>{formatDateTime(appointment.created_at)}</div>
                         </Col>
                         <Col span={12}>
@@ -339,23 +333,6 @@ export default function AppointmentsPage() {
             render: (type: string) => BUSINESS_TYPE_TEXT[type as keyof typeof BUSINESS_TYPE_TEXT],
         },
         {
-            title: '城市',
-            dataIndex: 'city',
-            key: 'city',
-            width: 100,
-        },
-        {
-            title: '已转化',
-            dataIndex: 'is_converted',
-            key: 'is_converted',
-            width: 80,
-            render: (converted: boolean) => (
-                <Tag color={converted ? 'green' : 'blue'}>
-                    {converted ? '是' : '否'}
-                </Tag>
-            ),
-        },
-        {
             title: '创建时间',
             dataIndex: 'created_at',
             key: 'created_at',
@@ -365,7 +342,7 @@ export default function AppointmentsPage() {
         {
             title: '操作',
             key: 'actions',
-            width: 200,
+            width: 120,
             fixed: 'right',
             render: (_, record) => (
                 <div className="action-buttons">
@@ -387,28 +364,6 @@ export default function AppointmentsPage() {
                     >
                         编辑
                     </Button>
-                    {record.status === 2 && !record.is_converted && (
-                        <Button
-                            type="text"
-                            icon={<CheckOutlined />}
-                            size="small"
-                            onClick={() => handleCompleteAppointment(record)}
-                            className="action-button success"
-                        >
-                            完成
-                        </Button>
-                    )}
-                    {record.status === 1 && (
-                        <Button
-                            type="text"
-                            icon={<CloseOutlined />}
-                            size="small"
-                            onClick={() => handleCancelAppointment(record)}
-                            className="action-button danger"
-                        >
-                            取消
-                        </Button>
-                    )}
                 </div>
             ),
         },
@@ -417,80 +372,6 @@ export default function AppointmentsPage() {
     return (
         <MainLayout>
             <div className="content-spacing">
-                {/* 页面标题 */}
-                <div className="page-header">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <h1 className="page-title">预约带看</h1>
-                            <p className="page-description">管理所有预约带看安排</p>
-                        </div>
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            size="large"
-                            onClick={handleAddAppointment}
-                            className="shadow-md hover:shadow-lg transition-shadow"
-                        >
-                            新增预约
-                        </Button>
-                    </div>
-                </div>
-
-                {/* 筛选面板 */}
-                <Card className="filter-panel">
-                    <Form
-                        form={form}
-                        onFinish={handleSearch}
-                        initialValues={filters}
-                        className="filter-form"
-                    >
-                        <div className="filter-row">
-                            <Form.Item name="customer_name" label="客户姓名" className="flex-1 min-w-48">
-                                <Input placeholder="请输入客户姓名" allowClear />
-                            </Form.Item>
-                            <Form.Item name="customer_phone" label="客户电话" className="flex-1 min-w-48">
-                                <Input placeholder="请输入客户电话" allowClear />
-                            </Form.Item>
-                            <Form.Item name="agent_name" label="经纪人" className="flex-1 min-w-48">
-                                <Input placeholder="请输入经纪人姓名" allowClear />
-                            </Form.Item>
-                            <Form.Item name="status" label="预约状态" className="min-w-40">
-                                <Select placeholder="请选择状态" allowClear>
-                                    {Object.entries(APPOINTMENT_STATUS_TEXT).map(([value, label]) => (
-                                        <Option key={value} value={parseInt(value)}>
-                                            {label}
-                                        </Option>
-                                    ))}
-                                </Select>
-                            </Form.Item>
-                        </div>
-                        <div className="filter-row">
-                            <Form.Item name="type" label="业务类型" className="min-w-40">
-                                <Select placeholder="请选择类型" allowClear>
-                                    {Object.entries(BUSINESS_TYPE_TEXT).map(([value, label]) => (
-                                        <Option key={value} value={value}>
-                                            {label}
-                                        </Option>
-                                    ))}
-                                </Select>
-                            </Form.Item>
-                            <Form.Item name="city" label="城市" className="flex-1 min-w-48">
-                                <Input placeholder="请输入城市" allowClear />
-                            </Form.Item>
-                            <Form.Item className="ml-auto">
-                                <Space size="middle">
-                                    <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-                                        搜索
-                                    </Button>
-                                    <Button onClick={handleReset}>
-                                        重置
-                                    </Button>
-                                </Space>
-                            </Form.Item>
-                        </div>
-                    </Form>
-                </Card>
-
                 {/* 统计卡片 */}
                 <div className="stats-panel">
                     <Row gutter={[24, 24]}>
@@ -527,8 +408,8 @@ export default function AppointmentsPage() {
                         <Col xs={24} sm={12} lg={6}>
                             <Card className="stats-card hover-card">
                                 <Statistic
-                                    title="已转化"
-                                    value={appointments.filter(a => a.is_converted).length}
+                                    title="已确认"
+                                    value={appointments.filter(a => a.status === 2).length}
                                     valueStyle={{ color: '#8b5cf6' }}
                                     prefix={<div className="w-2 h-2 bg-purple-500 rounded-full inline-block mr-2"></div>}
                                 />
@@ -536,6 +417,78 @@ export default function AppointmentsPage() {
                         </Col>
                     </Row>
                 </div>
+
+                {/* 页面标题 */}
+                <div className="page-header">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="page-title">预约带看</h1>
+                            <p className="page-description">管理所有预约带看安排</p>
+                        </div>
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            size="large"
+                            onClick={handleAddAppointment}
+                            className="shadow-md hover:shadow-lg transition-shadow"
+                        >
+                            新增预约
+                        </Button>
+                    </div>
+                </div>
+
+                {/* 筛选面板 */}
+                <Card className="filter-panel">
+                    <Form
+                        form={form}
+                        onFinish={handleSearch}
+                        initialValues={filters}
+                        className="filter-form"
+                    >
+                        <div className="filter-row">
+                            <Form.Item name="customer_name" label="客户姓名" className="flex-1 min-w-32">
+                                <Input placeholder="客户姓名" allowClear />
+                            </Form.Item>
+                            <Form.Item name="customer_phone" label="客户电话" className="flex-1 min-w-32">
+                                <Input placeholder="客户电话" allowClear />
+                            </Form.Item>
+                            <Form.Item name="agent_name" label="经纪人" className="flex-1 min-w-32">
+                                <Input placeholder="经纪人" allowClear />
+                            </Form.Item>
+                            <Form.Item name="status" label="状态" className="min-w-28">
+                                <Select placeholder="状态" allowClear>
+                                    {Object.entries(APPOINTMENT_STATUS_TEXT).map(([value, label]) => (
+                                        <Option key={value} value={parseInt(value)}>
+                                            {label}
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                            <Form.Item name="type" label="业务类型" className="min-w-28">
+                                <Select placeholder="类型" allowClear>
+                                    {Object.entries(BUSINESS_TYPE_TEXT).map(([value, label]) => (
+                                        <Option key={value} value={value}>
+                                            {label}
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                            <Form.Item name="city" label="城市" className="flex-1 min-w-32">
+                                <Input placeholder="城市" allowClear />
+                            </Form.Item>
+                            <Form.Item className="ml-auto">
+                                <Space size="small">
+                                    <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
+                                        搜索
+                                    </Button>
+                                    <Button onClick={handleReset}>
+                                        重置
+                                    </Button>
+                                </Space>
+                            </Form.Item>
+                        </div>
+                    </Form>
+                </Card>
 
                 {/* 预约列表 */}
                 <Card className="table-container">

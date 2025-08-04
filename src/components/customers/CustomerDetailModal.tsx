@@ -56,47 +56,40 @@ export default function CustomerDetailModal({ visible, customer, onCancel }: Cus
   // 带看记录表格列定义
   const viewingColumns: ColumnsType<ViewingRecord> = [
     {
-      title: 'ID',
+      title: '编号',
       dataIndex: 'id',
       key: 'id',
       width: 80,
     },
     {
-      title: '业务类型',
-      dataIndex: 'business_type',
-      key: 'business_type',
-      width: 100,
-      render: (type: string) => (BUSINESS_TYPE_TEXT_BY_STRING as Record<string, string>)[type] || type,
+      title: '带看时间',
+      dataIndex: 'viewing_time',
+      key: 'viewing_time',
+      width: 140,
+      render: (time: string) => formatDate(time),
     },
     {
-      title: '房型',
+      title: '带看楼盘',
+      dataIndex: 'property_name',
+      key: 'property_name',
+      width: 150,
+      render: (name: string) => name || '-',
+    },
+    {
+      title: '带看户型',
       dataIndex: 'room_type',
       key: 'room_type',
       width: 100,
       render: (type: string) => (ROOM_TYPE_TEXT_BY_STRING as Record<string, string>)[type] || type,
     },
     {
-      title: '房型标签',
-      dataIndex: 'room_tag',
-      key: 'room_tag',
-      width: 100,
-      render: (tag: string) => tag ? (ROOM_TAG_TEXT_BY_STRING as Record<string, string>)[tag] || tag : '-',
-    },
-    {
       title: '带看人',
       dataIndex: 'viewer_name',
       key: 'viewer_name',
-      width: 120,
+      width: 100,
     },
     {
-      title: '带看人类型',
-      dataIndex: 'viewer_type',
-      key: 'viewer_type',
-      width: 120,
-      render: (type: string) => (VIEWER_TYPE_TEXT_BY_STRING as Record<string, string>)[type] || type,
-    },
-    {
-      title: '状态',
+      title: '带看状态',
       dataIndex: 'viewing_status',
       key: 'viewing_status',
       width: 100,
@@ -107,7 +100,14 @@ export default function CustomerDetailModal({ visible, customer, onCancel }: Cus
       ),
     },
     {
-      title: '反馈',
+      title: '带看佣金',
+      dataIndex: 'commission',
+      key: 'commission',
+      width: 100,
+      render: (commission: number) => formatMoney(commission),
+    },
+    {
+      title: '带看反馈',
       dataIndex: 'viewing_feedback',
       key: 'viewing_feedback',
       width: 100,
@@ -117,20 +117,6 @@ export default function CustomerDetailModal({ visible, customer, onCancel }: Cus
             {(VIEWING_FEEDBACK_TEXT as Record<number, string>)[feedback]}
           </Tag>
         ) : '-',
-    },
-    {
-      title: '佣金',
-      dataIndex: 'commission',
-      key: 'commission',
-      width: 100,
-      render: (commission: number) => formatMoney(commission),
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      width: 140,
-      render: (time: string) => formatDate(time),
     },
   ];
 

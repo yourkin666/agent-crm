@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { dbManager } from '@/lib/database';
-import { Customer, CustomerFilterParams, ApiResponse, PaginatedResponse, SourceChannel, BusinessType } from '@/types';
-import { parseRoomTags } from '@/utils/helpers';
+import { dbManager } from '../../../lib/database';
+import { Customer, CustomerFilterParams, ApiResponse, PaginatedResponse, SourceChannel, BusinessType } from '../../../types';
+import { parseRoomTags } from '../../../utils/helpers';
 
 // GET /api/customers - 获取客户列表
 export async function GET(request: NextRequest) {
@@ -58,8 +58,34 @@ export async function GET(request: NextRequest) {
 
     // 价格区间过滤（需要解析 price_range 字段）
     if (filters.price_min || filters.price_max) {
-      // 这里需要复杂的价格区间匹配逻辑
-      // 暂时简化处理
+      // price_range 格式为 "最小价格-最大价格"，如 "8000-10000"
+      if (filters.price_min) {
+        // 筛选最大价格 >= price_min 的记录
+        conditions.push(`
+          CAST(
+            CASE 
+              WHEN price_range LIKE '%-%' 
+              THEN SUBSTR(price_range, INSTR(price_range, '-') + 1)
+              ELSE price_range
+            END AS INTEGER
+          ) >= ?
+        `);
+        params.push(filters.price_min);
+      }
+      
+      if (filters.price_max) {
+        // 筛选最小价格 <= price_max 的记录
+        conditions.push(`
+          CAST(
+            CASE 
+              WHEN price_range LIKE '%-%' 
+              THEN SUBSTR(price_range, 1, INSTR(price_range, '-') - 1)
+              ELSE price_range
+            END AS INTEGER
+          ) <= ?
+        `);
+        params.push(filters.price_max);
+      }
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';

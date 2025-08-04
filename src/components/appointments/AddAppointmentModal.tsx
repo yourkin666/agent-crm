@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  Modal, Form, Input, Select, DatePicker, Row, Col, message
+  Modal, Form, Input, Select, DatePicker, Row, Col, message, Checkbox, Divider, InputNumber
 } from 'antd';
 import {
   AppointmentStatus, BusinessType
@@ -23,6 +23,7 @@ interface AddAppointmentModalProps {
 export default function AddAppointmentModal({ visible, onCancel, onSuccess }: AddAppointmentModalProps) {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
+  const [createViewingRecord, setCreateViewingRecord] = React.useState(false);
 
   const handleSubmit = async (values: any) => {
     setLoading(true);
@@ -35,14 +36,17 @@ export default function AddAppointmentModal({ visible, onCancel, onSuccess }: Ad
         body: JSON.stringify({
           ...values,
           appointment_time: values.appointment_time.toISOString(),
+          create_viewing_record: createViewingRecord,
         }),
       });
 
       const result = await response.json();
 
       if (result.success) {
-        message.success('预约创建成功');
+        const successMsg = createViewingRecord ? '预约创建成功，带看记录已同步创建' : '预约创建成功';
+        message.success(successMsg);
         form.resetFields();
+        setCreateViewingRecord(false);
         onSuccess();
         onCancel();
       } else {
@@ -58,6 +62,7 @@ export default function AddAppointmentModal({ visible, onCancel, onSuccess }: Ad
 
   const handleCancel = () => {
     form.resetFields();
+    setCreateViewingRecord(false);
     onCancel();
   };
 
@@ -188,6 +193,67 @@ export default function AddAppointmentModal({ visible, onCancel, onSuccess }: Ad
             </Form.Item>
           </Col>
         </Row>
+
+        <Divider orientation="left">带看记录同步</Divider>
+        
+        <Row>
+          <Col span={24}>
+            <Checkbox 
+              checked={createViewingRecord}
+              onChange={(e) => setCreateViewingRecord(e.target.checked)}
+            >
+              同时创建带看记录（预约完成后会自动在客户的带看记录中显示）
+            </Checkbox>
+          </Col>
+        </Row>
+
+        {createViewingRecord && (
+          <>
+            <Row gutter={16} style={{ marginTop: 16 }}>
+              <Col span={12}>
+                <Form.Item
+                  name="viewing_feedback"
+                  label="带看反馈"
+                  initialValue={0}
+                >
+                  <Select placeholder="请选择带看反馈">
+                    <Option value={0}>未成交</Option>
+                    <Option value={1}>已成交</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="commission"
+                  label="佣金"
+                  initialValue={0}
+                >
+                  <InputNumber
+                    style={{ width: '100%' }}
+                    placeholder="请输入佣金金额"
+                    min={0}
+                    precision={2}
+                    formatter={(value) => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    parser={(value) => value!.replace(/¥\s?|(,*)/g, '')}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row>
+              <Col span={24}>
+                <Form.Item
+                  name="notes"
+                  label="备注"
+                >
+                  <Input.TextArea 
+                    placeholder="请输入带看备注"
+                    rows={3}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+          </>
+        )}
       </Form>
     </Modal>
   );

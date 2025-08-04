@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/database';
+import { getDatabase } from '../../../../../lib/database';
 
 export async function PUT(
   request: NextRequest,
@@ -58,14 +58,17 @@ export async function PUT(
       // 1. 创建带看记录
       const viewingResult = await db.run(`
         INSERT INTO viewing_records (
-          customer_id, business_type, room_type, room_tag,
-          viewer_name, viewer_type, viewing_status, viewing_feedback,
-          commission, notes
-        ) VALUES (?, ?, 'one_bedroom', NULL, ?, 'internal', 4, 1, 0, ?)
+          customer_id, viewing_time, property_name, property_address,
+          room_type, room_tag, viewer_name, viewer_type, 
+          viewing_status, commission, viewing_feedback, business_type, notes
+        ) VALUES (?, ?, ?, ?, 'one_bedroom', NULL, ?, 'internal', 4, 0, 1, ?, ?)
       `, [
         customerId,
-        appointment.type,
+        appointment.appointment_time,
+        appointment.property_name,
+        appointment.property_address,
         appointment.agent_name,
+        appointment.type,
         `从预约 "${appointment.property_name}" 转化而来`
       ]);
 

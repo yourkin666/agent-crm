@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/database';
+import { getDatabase } from '../../../lib/database';
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,19 +8,22 @@ export async function POST(request: NextRequest) {
     
     const {
       customer_id,
-      business_type,
+      viewing_time,
+      property_name,
+      property_address,
       room_type,
       room_tag,
       viewer_name,
       viewer_type,
       viewing_status = 1, // 默认为待确认
-      viewing_feedback,
       commission = 0,
+      viewing_feedback,
+      business_type,
       notes
     } = body;
 
     // 验证必填字段
-    if (!customer_id || !business_type || !room_type || !viewer_name || !viewer_type) {
+    if (!customer_id || !viewing_time || !property_name || !room_type || !viewer_name || !viewer_type || !business_type) {
       return NextResponse.json(
         { success: false, error: '请填写所有必填字段' },
         { status: 400 }
@@ -43,14 +46,14 @@ export async function POST(request: NextRequest) {
     // 插入带看记录
     const result = await db.run(`
       INSERT INTO viewing_records (
-        customer_id, business_type, room_type, room_tag,
-        viewer_name, viewer_type, viewing_status, viewing_feedback,
-        commission, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        customer_id, viewing_time, property_name, property_address,
+        room_type, room_tag, viewer_name, viewer_type, 
+        viewing_status, commission, viewing_feedback, business_type, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      customer_id, business_type, room_type, room_tag,
-      viewer_name, viewer_type, viewing_status, viewing_feedback,
-      commission, notes
+      customer_id, viewing_time, property_name, property_address,
+      room_type, room_tag, viewer_name, viewer_type,
+      viewing_status, commission, viewing_feedback, business_type, notes
     ]);
 
     if (result.lastID) {

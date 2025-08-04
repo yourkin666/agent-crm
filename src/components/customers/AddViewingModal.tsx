@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import {
-  Modal, Form, Input, Select, Row, Col, InputNumber, message
+  Modal, Form, Input, Select, Row, Col, InputNumber, message, DatePicker
 } from 'antd';
+import dayjs from 'dayjs';
 import { Customer } from '@/types';
 import {
   BUSINESS_TYPE_TEXT_BY_STRING, ROOM_TYPE_TEXT_BY_STRING, 
@@ -38,6 +39,7 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
         body: JSON.stringify({
           customer_id: customer.id,
           ...values,
+          viewing_time: values.viewing_time ? values.viewing_time.toISOString() : new Date().toISOString(),
         }),
       });
 
@@ -85,8 +87,42 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
           room_type: customer.room_type,
           viewing_status: 1,
           commission: 0,
+          viewing_time: dayjs(),
         }}
       >
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              name="viewing_time"
+              label="带看时间"
+              rules={[{ required: true, message: '请选择带看时间' }]}
+            >
+              <DatePicker
+                showTime
+                style={{ width: '100%' }}
+                placeholder="请选择带看时间"
+                format="YYYY-MM-DD HH:mm"
+              />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              name="property_name"
+              label="带看楼盘"
+              rules={[{ required: true, message: '请输入带看楼盘' }]}
+            >
+              <Input placeholder="请输入楼盘名称" />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Form.Item
+          name="property_address"
+          label="楼盘地址"
+        >
+          <Input placeholder="请输入楼盘详细地址" />
+        </Form.Item>
+
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
@@ -104,10 +140,10 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
           <Col span={12}>
             <Form.Item
               name="room_type"
-              label="房型"
-              rules={[{ required: true, message: '请选择房型' }]}
+              label="带看户型"
+              rules={[{ required: true, message: '请选择带看户型' }]}
             >
-              <Select placeholder="请选择房型">
+              <Select placeholder="请选择户型">
                 {Object.entries(ROOM_TYPE_TEXT_BY_STRING).map(([key, value]) => (
                   <Option key={key} value={key}>{value}</Option>
                 ))}

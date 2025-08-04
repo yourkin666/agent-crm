@@ -291,86 +291,6 @@ export default function CustomersPage() {
     return (
         <MainLayout>
             <div className="content-spacing">
-                {/* 页面标题 */}
-                <div className="page-header">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <h1 className="page-title">客户管理</h1>
-                            <p className="page-description">管理所有客户信息和带看记录</p>
-                        </div>
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            size="large"
-                            onClick={handleAddCustomer}
-                            className="shadow-md hover:shadow-lg transition-shadow"
-                        >
-                            新增客户
-                        </Button>
-                    </div>
-                </div>
-
-                {/* 筛选面板 */}
-                <Card className="filter-panel">
-                    <Form
-                        form={form}
-                        onFinish={handleSearch}
-                        initialValues={filters}
-                        className="filter-form"
-                    >
-                        <div className="filter-row">
-                            <Form.Item name="name" label="客户姓名" className="flex-1 min-w-48">
-                                <Input placeholder="请输入客户姓名" allowClear />
-                            </Form.Item>
-                            <Form.Item name="phone" label="手机号" className="flex-1 min-w-48">
-                                <Input placeholder="请输入手机号" allowClear />
-                            </Form.Item>
-                            <Form.Item name="status" label="客户状态" className="min-w-40">
-                                <Select placeholder="请选择状态" allowClear>
-                                    {Object.entries(CUSTOMER_STATUS_TEXT).map(([value, label]) => (
-                                        <Option key={value} value={parseInt(value)}>
-                                            {label}
-                                        </Option>
-                                    ))}
-                                </Select>
-                            </Form.Item>
-                            <Form.Item name="source_channel" label="来源渠道" className="min-w-40">
-                                <Select placeholder="请选择渠道" allowClear>
-                                    {Object.entries(SOURCE_CHANNEL_TEXT).map(([value, label]) => (
-                                        <Option key={value} value={value}>
-                                            {label}
-                                        </Option>
-                                    ))}
-                                </Select>
-                            </Form.Item>
-                        </div>
-                        <div className="filter-row">
-                            <Form.Item name="business_type" label="业务类型" className="min-w-40">
-                                <Select placeholder="请选择类型" allowClear>
-                                    {Object.entries(BUSINESS_TYPE_TEXT).map(([value, label]) => (
-                                        <Option key={value} value={value}>
-                                            {label}
-                                        </Option>
-                                    ))}
-                                </Select>
-                            </Form.Item>
-                            <Form.Item name="community" label="咨询小区" className="flex-1 min-w-48">
-                                <Input placeholder="请输入小区名称" allowClear />
-                            </Form.Item>
-                            <Form.Item className="ml-auto">
-                                <Space size="middle">
-                                    <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-                                        搜索
-                                    </Button>
-                                    <Button onClick={handleReset}>
-                                        重置
-                                    </Button>
-                                </Space>
-                            </Form.Item>
-                        </div>
-                    </Form>
-                </Card>
-
                 {/* 统计卡片 */}
                 <div className="stats-panel">
                     <Row gutter={[24, 24]}>
@@ -418,6 +338,75 @@ export default function CustomersPage() {
                         </Col>
                     </Row>
                 </div>
+
+                {/* 页面标题 */}
+                <div className="page-header">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="page-title">客户管理</h1>
+                            <p className="page-description">管理所有客户信息和带看记录</p>
+                        </div>
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            size="large"
+                            onClick={handleAddCustomer}
+                            className="shadow-md hover:shadow-lg transition-shadow"
+                        >
+                            新增客户
+                        </Button>
+                    </div>
+                </div>
+
+                {/* 筛选面板 */}
+                <Card className="filter-panel">
+                    <Form
+                        form={form}
+                        onFinish={handleSearch}
+                        initialValues={filters}
+                        className="filter-form"
+                    >
+                        <div className="filter-row">
+                            <Form.Item name="name" label="客户姓名" className="flex-1 min-w-32">
+                                <Input placeholder="客户姓名" allowClear />
+                            </Form.Item>
+                            <Form.Item name="phone" label="手机号" className="flex-1 min-w-32">
+                                <Input placeholder="手机号" allowClear />
+                            </Form.Item>
+                            <Form.Item name="status" label="状态" className="min-w-28">
+                                <Select placeholder="状态" allowClear>
+                                    {Object.entries(CUSTOMER_STATUS_TEXT).map(([value, label]) => (
+                                        <Option key={value} value={parseInt(value)}>
+                                            {label}
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                            <Form.Item name="business_type" label="业务类型" className="min-w-28">
+                                <Select placeholder="类型" allowClear>
+                                    {Object.entries(BUSINESS_TYPE_TEXT).map(([value, label]) => (
+                                        <Option key={value} value={value}>
+                                            {label}
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                            <Form.Item name="community" label="小区" className="flex-1 min-w-32">
+                                <Input placeholder="小区名称" allowClear />
+                            </Form.Item>
+                            <Form.Item className="ml-auto">
+                                <Space size="small">
+                                    <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
+                                        搜索
+                                    </Button>
+                                    <Button onClick={handleReset}>
+                                        重置
+                                    </Button>
+                                </Space>
+                            </Form.Item>
+                        </div>
+                    </Form>
+                </Card>
 
                 {/* 客户列表 */}
                 <Card className="table-container">
