@@ -171,29 +171,21 @@ export default function CustomersPage() {
     // 表格列定义
     const columns: ColumnsType<Customer> = [
         {
-            title: 'ID',
-            dataIndex: 'id',
-            key: 'id',
-            width: 80,
-        },
-        {
-            title: '租客姓名',
-            dataIndex: 'name',
-            key: 'name',
-            width: 120,
-        },
-        {
-            title: '手机号',
-            dataIndex: 'phone',
-            key: 'phone',
+            title: '租客',
+            key: 'customer',
             width: 130,
-            render: (phone: string) => formatPhone(phone),
+            render: (_, record) => (
+                <div className="customer-info">
+                    <div className="customer-name">{record.name}</div>
+                    <div className="customer-phone">{formatPhone(record.phone)}</div>
+                </div>
+            ),
         },
         {
             title: '状态',
             dataIndex: 'status',
             key: 'status',
-            width: 120,
+            width: 90,
             render: (status: number) => (
                 <Tag color={CUSTOMER_STATUS_COLOR[status as keyof typeof CUSTOMER_STATUS_COLOR]}>
                     {CUSTOMER_STATUS_TEXT[status as keyof typeof CUSTOMER_STATUS_TEXT]}
@@ -204,32 +196,39 @@ export default function CustomersPage() {
             title: '咨询小区',
             dataIndex: 'community',
             key: 'community',
-            width: 150,
+            width: 120,
         },
         {
             title: '需求房型',
             key: 'requirement',
-            width: 200,
+            width: 160,
             render: (_, record) => formatRequirement(record.business_type, record.room_type, record.room_tags),
+        },
+        {
+            title: '入住时间',
+            dataIndex: 'move_in_date',
+            key: 'move_in_date',
+            width: 90,
+            render: (date: string) => date ? formatDate(date) : '-',
         },
         {
             title: '可接受价格',
             dataIndex: 'price_range',
             key: 'price_range',
-            width: 120,
+            width: 100,
         },
         {
             title: '线索佣金',
             dataIndex: 'total_commission',
             key: 'total_commission',
-            width: 100,
+            width: 80,
             render: (commission: number) => formatMoney(commission),
         },
         {
             title: '带看次数',
             dataIndex: 'viewing_count',
             key: 'viewing_count',
-            width: 80,
+            width: 70,
             render: (count: number, record: Customer) => (
                 <Button type="link" size="small" onClick={() => handleViewingDetails(record)}>
                     {count}
@@ -240,22 +239,26 @@ export default function CustomersPage() {
             title: '来源渠道',
             dataIndex: 'source_channel',
             key: 'source_channel',
-            width: 100,
+            width: 80,
             render: (channel: string) => SOURCE_CHANNEL_TEXT[channel as keyof typeof SOURCE_CHANNEL_TEXT],
         },
         {
-            title: '录入人',
-            dataIndex: 'creator',
-            key: 'creator',
-            width: 100,
+            title: '录入',
+            key: 'entry_info',
+            width: 120,
+            render: (_, record) => (
+                <span className="entry-info">
+                    {record.is_agent ? '[人工]' : '[agent]'} {record.creator}
+                </span>
+            ),
         },
         {
             title: '操作',
             key: 'actions',
-            width: 180,
+            width: 160,
             fixed: 'right',
             render: (_, record) => (
-                <div className="action-buttons">
+                <div className="action-buttons compact">
                     <Button
                         type="text"
                         icon={<EyeOutlined />}
@@ -340,12 +343,9 @@ export default function CustomersPage() {
                 </div>
 
                 {/* 页面标题 */}
-                <div className="page-header">
+                <div className="page-header-compact">
                     <div className="flex justify-between items-center">
-                        <div>
-                            <h1 className="page-title">客户管理</h1>
-                            <p className="page-description">管理所有客户信息和带看记录</p>
-                        </div>
+                        <h1 className="page-title-compact">客户管理</h1>
                         <Button
                             type="primary"
                             icon={<PlusOutlined />}
@@ -416,7 +416,6 @@ export default function CustomersPage() {
                         rowKey="id"
                         loading={loading}
                         pagination={false}
-                        scroll={{ x: 1500 }}
                         size="middle"
                         className="custom-scrollbar"
                     />
@@ -445,6 +444,7 @@ export default function CustomersPage() {
                         setDetailModalVisible(false);
                         setCurrentCustomer(null);
                     }}
+                    onEdit={handleEditCustomer}
                 />
 
                 {/* 添加带看记录模态框 */}

@@ -17,7 +17,7 @@ import {
     APPOINTMENT_STATUS_TEXT, APPOINTMENT_STATUS_COLOR, BUSINESS_TYPE_TEXT,
     DEFAULT_PAGE_SIZE
 } from '@/utils/constants';
-import { formatDateTime, formatDate } from '@/utils/helpers';
+import { formatDateTime, formatDate, formatPhone } from '@/utils/helpers';
 
 // 动态导入 Modal 组件以减少初始加载时间
 const AddAppointmentModal = dynamic(() => import('@/components/appointments/AddAppointmentModal'), {
@@ -271,54 +271,47 @@ export default function AppointmentsPage() {
     // 表格列定义
     const columns: ColumnsType<Appointment> = [
         {
-            title: 'ID',
-            dataIndex: 'id',
-            key: 'id',
-            width: 80,
-        },
-        {
             title: '物业名称',
             dataIndex: 'property_name',
             key: 'property_name',
-            width: 150,
+            width: 130,
         },
         {
             title: '房间地址',
             dataIndex: 'property_address',
             key: 'property_address',
-            width: 200,
+            width: 160,
             ellipsis: true,
         },
         {
-            title: '客户姓名',
-            dataIndex: 'customer_name',
-            key: 'customer_name',
-            width: 120,
-        },
-        {
-            title: '客户电话',
-            dataIndex: 'customer_phone',
-            key: 'customer_phone',
+            title: '客户',
+            key: 'customer',
             width: 130,
+            render: (_, record) => (
+                <div className="customer-info">
+                    <div className="customer-name">{record.customer_name}</div>
+                    <div className="customer-phone">{formatPhone(record.customer_phone)}</div>
+                </div>
+            ),
         },
         {
             title: '经纪人',
             dataIndex: 'agent_name',
             key: 'agent_name',
-            width: 120,
+            width: 90,
         },
         {
             title: '预约时间',
             dataIndex: 'appointment_time',
             key: 'appointment_time',
-            width: 160,
+            width: 140,
             render: (time: string) => formatDateTime(time),
         },
         {
             title: '状态',
             dataIndex: 'status',
             key: 'status',
-            width: 120,
+            width: 90,
             render: (status: number) => (
                 <Tag color={APPOINTMENT_STATUS_COLOR[status as keyof typeof APPOINTMENT_STATUS_COLOR]}>
                     {APPOINTMENT_STATUS_TEXT[status as keyof typeof APPOINTMENT_STATUS_TEXT]}
@@ -329,23 +322,23 @@ export default function AppointmentsPage() {
             title: '类型',
             dataIndex: 'type',
             key: 'type',
-            width: 100,
+            width: 80,
             render: (type: string) => BUSINESS_TYPE_TEXT[type as keyof typeof BUSINESS_TYPE_TEXT],
         },
         {
             title: '创建时间',
             dataIndex: 'created_at',
             key: 'created_at',
-            width: 140,
+            width: 100,
             render: (time: string) => formatDate(time),
         },
         {
             title: '操作',
             key: 'actions',
-            width: 120,
+            width: 100,
             fixed: 'right',
             render: (_, record) => (
-                <div className="action-buttons">
+                <div className="action-buttons compact">
                     <Button
                         type="text"
                         icon={<EyeOutlined />}
@@ -419,12 +412,9 @@ export default function AppointmentsPage() {
                 </div>
 
                 {/* 页面标题 */}
-                <div className="page-header">
+                <div className="page-header-compact">
                     <div className="flex justify-between items-center">
-                        <div>
-                            <h1 className="page-title">预约带看</h1>
-                            <p className="page-description">管理所有预约带看安排</p>
-                        </div>
+                        <h1 className="page-title-compact">预约带看</h1>
                         <Button
                             type="primary"
                             icon={<PlusOutlined />}
@@ -498,7 +488,6 @@ export default function AppointmentsPage() {
                         rowKey="id"
                         loading={loading}
                         pagination={false}
-                        scroll={{ x: 1600 }}
                         size="middle"
                         className="custom-scrollbar"
                     />

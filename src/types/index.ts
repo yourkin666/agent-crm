@@ -106,6 +106,7 @@ export interface Customer {
   source_channel: SourceChannel;   // 来源渠道
   creator: string;                 // 录入人
   is_agent: boolean;               // 是否为人工录入
+  internal_notes?: string;         // 内部备注（最多300字）
   total_commission: number;        // 线索佣金（计算字段）
   viewing_count: number;           // 带看次数（计算字段）
   created_at: string;

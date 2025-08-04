@@ -35,7 +35,7 @@ export const SOURCE_CHANNEL_TEXT = {
 // 业务类型显示文本
 export const BUSINESS_TYPE_TEXT = {
   [BusinessType.WHOLE_RENT]: '整租',
-  [BusinessType.CENTRALIZED]: '集中',
+  [BusinessType.CENTRALIZED]: '集中式',
   [BusinessType.SHARED_RENT]: '合租',
 };
 
@@ -61,7 +61,7 @@ export const ROOM_TAG_TEXT = {
 // 字符串键的业务类型显示文本 (用于数据库字符串值)
 export const BUSINESS_TYPE_TEXT_BY_STRING = {
   'whole_rent': '整租',
-  'centralized': '集中',
+  'centralized': '集中式',
   'shared_rent': '合租',
 };
 

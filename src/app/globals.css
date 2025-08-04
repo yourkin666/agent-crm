@@ -39,6 +39,128 @@
   @apply text-gray-600 text-sm;
 }
 
+/* 紧凑型页面标题样式 */
+.page-header-compact {
+  @apply mb-2 bg-white p-2 rounded-xl shadow-sm border border-gray-100;
+}
+
+.page-title-compact {
+  @apply text-2xl font-bold text-gray-900 m-0;
+}
+
+/* 客户信息样式 */
+.customer-info {
+  @apply flex flex-col;
+}
+
+.customer-name {
+  @apply font-medium text-gray-900 text-sm mb-1;
+}
+
+.customer-phone {
+  @apply text-gray-600 text-xs;
+}
+
+/* 录入信息样式 */
+.entry-info {
+  @apply text-sm;
+}
+
+/* 紧凑型操作按钮样式 */
+.action-buttons.compact {
+  @apply flex gap-1;
+}
+
+.action-buttons.compact .action-button {
+  @apply px-2 py-1 min-w-0;
+}
+
+/* 客户详情信息样式 */
+.customer-detail-content {
+  @apply p-0;
+}
+
+.section-block {
+  @apply mb-4 pb-3;
+}
+
+.section-block:not(:last-child) {
+  @apply border-b border-gray-200;
+}
+
+.section-title {
+  @apply text-base font-semibold text-gray-800 mb-3 pb-1 border-b border-gray-100;
+}
+
+.info-item {
+  @apply mb-2;
+}
+
+.info-label {
+  @apply text-gray-700 text-sm mb-1 font-normal;
+}
+
+.info-value {
+  @apply text-gray-900 text-sm leading-tight;
+}
+
+.info-textarea {
+  @apply border border-gray-300 rounded-md p-2 bg-gray-50 min-h-[50px] w-full;
+}
+
+.remark-content {
+  @apply text-gray-500 text-sm leading-relaxed;
+}
+
+/* 编辑客户表单样式 */
+.edit-customer-form .section-block {
+  @apply mb-3 pb-2;
+}
+
+.edit-customer-form .section-block:not(:last-child) {
+  @apply border-b border-gray-200;
+}
+
+.edit-customer-form .section-title {
+  @apply text-sm font-semibold text-gray-800 mb-2 pb-1 border-b border-gray-100;
+}
+
+.edit-customer-form .ant-form-item {
+  @apply mb-2;
+}
+
+.edit-customer-form .ant-form-item-label {
+  @apply pb-1;
+}
+
+.edit-customer-form .ant-form-item-label > label {
+  @apply text-gray-700 text-xs font-normal;
+}
+
+.edit-customer-form .ant-input,
+.edit-customer-form .ant-select-selector,
+.edit-customer-form .ant-picker {
+  @apply h-8 text-sm;
+}
+
+.edit-customer-form .ant-input-affix-wrapper {
+  @apply h-8;
+}
+
+.edit-customer-form .ant-select-selector .ant-select-selection-item {
+  @apply text-sm leading-6;
+}
+
+.edit-customer-form .ant-input::placeholder,
+.edit-customer-form .ant-select-selector .ant-select-selection-placeholder {
+  @apply text-xs text-gray-400;
+}
+
+/* 编辑表单模态框样式 */
+.edit-customer-form .ant-form {
+  @apply m-0;
+}
+
 .filter-panel {
   @apply mb-4 bg-white rounded-xl shadow-sm border border-gray-100;
 }
@@ -190,6 +312,14 @@
     @apply flex-col items-start gap-4;
   }
   
+  .page-header-compact {
+    @apply p-2;
+  }
+  
+  .page-header-compact .flex {
+    @apply flex-col items-start gap-3;
+  }
+  
   .filter-panel .ant-card-body {
     @apply p-3;
   }
@@ -199,7 +329,7 @@
   }
   
   .ant-table {
-    min-width: 800px;
+    min-width: 1080px;
   }
   
   .pagination-container {

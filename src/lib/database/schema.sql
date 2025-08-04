@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS customers (
   source_channel TEXT NOT NULL,          -- 来源渠道 (xianyu, xiaohongshu, beike, 58tongcheng, shipinhao, douyin, referral)
   creator TEXT NOT NULL,                 -- 录入人
   is_agent BOOLEAN NOT NULL DEFAULT 1,   -- 是否为人工录入 (1=人工, 0=agent)
+  internal_notes TEXT,                   -- 内部备注 (最多300字)
   total_commission DECIMAL(10,2) DEFAULT 0, -- 线索佣金（计算字段）
   viewing_count INTEGER DEFAULT 0,       -- 带看次数（计算字段）
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

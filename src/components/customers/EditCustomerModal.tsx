@@ -79,176 +79,182 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
 
   return (
     <Modal
-      title={`编辑客户 - ${customer.name}`}
+      title="编辑客户信息"
       open={visible}
       onCancel={handleCancel}
       onOk={() => form.submit()}
       confirmLoading={loading}
       width={800}
       destroyOnHidden
+      styles={{
+        body: { padding: '16px' },
+        header: { paddingBottom: '12px' }
+      }}
     >
       <Form
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
+        className="edit-customer-form"
       >
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="name"
-              label="租客姓名"
-              rules={[{ required: true, message: '请输入租客姓名' }]}
-            >
-              <Input placeholder="请输入租客姓名" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="phone"
-              label="手机号"
-              rules={[
-                { required: true, message: '请输入手机号' },
-                { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式' }
-              ]}
-            >
-              <Input placeholder="请输入手机号" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="backup_phone" label="备用手机">
-              <Input placeholder="请输入备用手机号" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="wechat" label="微信">
-              <Input placeholder="请输入微信号" />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="community"
-              label="咨询小区"
-              rules={[{ required: true, message: '请输入咨询小区' }]}
-            >
-              <Input placeholder="请输入咨询小区名称" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="status"
-              label="客户状态"
-              rules={[{ required: true, message: '请选择客户状态' }]}
-            >
-              <Select placeholder="请选择客户状态">
-                {Object.entries(CUSTOMER_STATUS_TEXT).map(([value, label]) => (
-                  <Option key={value} value={parseInt(value)}>
-                    {label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col span={8}>
-            <Form.Item
-              name="business_type"
-              label="业务类型"
-              rules={[{ required: true, message: '请选择业务类型' }]}
-            >
-              <Select placeholder="请选择业务类型">
-                {Object.entries(BUSINESS_TYPE_TEXT).map(([value, label]) => (
-                  <Option key={value} value={value}>
-                    {label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item
-              name="room_type"
-              label="房型"
-              rules={[{ required: true, message: '请选择房型' }]}
-            >
-              <Select placeholder="请选择房型">
-                {Object.entries(ROOM_TYPE_TEXT).map(([value, label]) => (
-                  <Option key={value} value={value}>
-                    {label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={8}>
-            <Form.Item name="room_tags" label="房型标签">
-              <Select
-                mode="multiple"
-                placeholder="请选择房型标签"
-                allowClear
+        {/* 客户信息部分 */}
+        <div className="section-block">
+          <div className="section-title">客户信息</div>
+          <Row gutter={[12, 4]}>
+            <Col span={12}>
+              <Form.Item
+                name="name"
+                label="客户姓名"
+                rules={[{ required: true, message: '请输入客户姓名' }]}
               >
-                {Object.entries(ROOM_TAG_TEXT).map(([value, label]) => (
-                  <Option key={value} value={value}>
-                    {label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
+                <Input placeholder="请输入客户姓名" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="status"
+                label="客户状态"
+                rules={[{ required: true, message: '请选择客户状态' }]}
+              >
+                <Select placeholder="请选择客户状态">
+                  {Object.entries(CUSTOMER_STATUS_TEXT).map(([value, label]) => (
+                    <Option key={value} value={parseInt(value)}>
+                      {label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="phone"
+                label="手机号"
+                rules={[
+                  { required: true, message: '请输入手机号' },
+                  { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式' }
+                ]}
+              >
+                <Input placeholder="请输入手机号" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="backup_phone" label="备用手机号">
+                <Input placeholder="请输入备用手机号" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="wechat" label="微信号">
+                <Input placeholder="请输入微信号" />
+              </Form.Item>
+            </Col>
+          </Row>
+        </div>
 
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="move_in_date" label="入住时间">
-              <DatePicker
-                style={{ width: '100%' }}
-                placeholder="请选择入住时间"
-                format="YYYY-MM-DD"
-              />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item name="lease_period" label="租赁周期">
-              <Select placeholder="请选择租赁周期" allowClear>
-                {Object.entries(LEASE_PERIOD_TEXT).map(([value, label]) => (
-                  <Option key={value} value={parseInt(value)}>
-                    {label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
+        {/* 找房需求部分 */}
+        <div className="section-block">
+          <div className="section-title">找房需求</div>
+          <Row gutter={[12, 4]}>
+            <Col span={12}>
+              <Form.Item
+                name="community"
+                label="咨询小区"
+                rules={[{ required: true, message: '请输入咨询小区' }]}
+              >
+                <Input placeholder="请输入咨询小区名称" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="business_type"
+                label="需求户型（业务类型）"
+                rules={[{ required: true, message: '请选择业务类型' }]}
+              >
+                <Select placeholder="请选择业务类型">
+                  {Object.entries(BUSINESS_TYPE_TEXT).map(([value, label]) => (
+                    <Option key={value} value={value}>
+                      {label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="price_range" label="可接受价格">
+                <Input placeholder="例如：5000-7000" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="move_in_date" label="预计入住时间">
+                <DatePicker
+                  style={{ width: '100%' }}
+                  placeholder="请选择入住时间"
+                  format="YYYY-MM-DD"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="lease_period" label="预计租赁周期">
+                <Select placeholder="请选择租赁周期" allowClear>
+                  {Object.entries(LEASE_PERIOD_TEXT).map(([value, label]) => (
+                    <Option key={value} value={parseInt(value)}>
+                      {label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="source_channel"
+                label="来源渠道"
+                rules={[{ required: true, message: '请选择来源渠道' }]}
+              >
+                <Select placeholder="请选择来源渠道">
+                  {Object.entries(SOURCE_CHANNEL_TEXT).map(([value, label]) => (
+                    <Option key={value} value={value}>
+                      {label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+        </div>
 
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item name="price_range" label="可接受价格">
-              <Input placeholder="例如：5000-7000" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="source_channel"
-              label="来源渠道"
-              rules={[{ required: true, message: '请选择来源渠道' }]}
-            >
-              <Select placeholder="请选择来源渠道">
-                {Object.entries(SOURCE_CHANNEL_TEXT).map(([value, label]) => (
-                  <Option key={value} value={value}>
-                    {label}
-                  </Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-        </Row>
+        {/* 内部备注部分 */}
+        <div className="section-block">
+          <div className="section-title">内部备注</div>
+          <Row gutter={[12, 4]}>
+            <Col span={24}>
+              <Form.Item 
+                name="internal_notes" 
+                label="内部备注 (最多300字)"
+              >
+                <Input.TextArea
+                  placeholder="请输入内部备注信息..."
+                  rows={3}
+                  maxLength={300}
+                  showCount
+                  style={{ resize: 'none', fontSize: '14px' }}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        </div>
+
+        {/* 房型配置（移到找房需求中） */}
+        <div style={{ display: 'none' }}>
+          <Form.Item
+            name="room_type"
+            rules={[{ required: true, message: '请选择房型' }]}
+            initialValue="one_bedroom"
+          >
+            <Input type="hidden" />
+          </Form.Item>
+          <Form.Item name="room_tags">
+            <Input type="hidden" />
+          </Form.Item>
+        </div>
       </Form>
     </Modal>
   );

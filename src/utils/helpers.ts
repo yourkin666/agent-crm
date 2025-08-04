@@ -9,11 +9,11 @@ import {
 /**
  * 格式化手机号显示
  * @param phone 手机号
- * @returns 格式化后的手机号 (134****5678)
+ * @returns 完整的手机号
  */
 export function formatPhone(phone: string): string {
-  if (!phone || phone.length !== 11) return phone;
-  return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
+  if (!phone) return phone;
+  return phone;
 }
 
 /**
