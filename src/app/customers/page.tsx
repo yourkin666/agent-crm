@@ -1,0 +1,492 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import {
+    Table, Button, Space, Tag, Input, Select, Form, Row, Col,
+    Card, Statistic, message, Pagination
+} from 'antd';
+import {
+    PlusOutlined, SearchOutlined, EyeOutlined,
+    EditOutlined, CalendarOutlined
+} from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
+import MainLayout from '@/components/layout/MainLayout';
+import CustomerDetailModal from '@/components/customers/CustomerDetailModal';
+import AddViewingModal from '@/components/customers/AddViewingModal';
+import AddCustomerModal from '@/components/customers/AddCustomerModal';
+import EditCustomerModal from '@/components/customers/EditCustomerModal';
+import { Customer, CustomerFilterParams, ApiResponse, PaginatedResponse } from '@/types';
+import {
+    CUSTOMER_STATUS_TEXT, CUSTOMER_STATUS_COLOR, SOURCE_CHANNEL_TEXT,
+    BUSINESS_TYPE_TEXT, DEFAULT_PAGE_SIZE
+} from '@/utils/constants';
+import { formatPhone, formatDate, formatMoney, formatRequirement } from '@/utils/helpers';
+
+const { Option } = Select;
+
+export default function CustomersPage() {
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [pagination, setPagination] = useState({
+        current: 1,
+        pageSize: DEFAULT_PAGE_SIZE,
+        total: 0,
+        showSizeChanger: true,
+        showQuickJumper: true,
+        showTotal: (total: number) => `共 ${total} 条记录`,
+    });
+
+    const [form] = Form.useForm();
+    const [filters, setFilters] = useState<CustomerFilterParams>({
+        page: 1,
+        pageSize: DEFAULT_PAGE_SIZE,
+    });
+
+    // 模态框状态
+    const [addModalVisible, setAddModalVisible] = useState(false);
+    const [editModalVisible, setEditModalVisible] = useState(false);
+    const [detailModalVisible, setDetailModalVisible] = useState(false);
+    const [addViewingModalVisible, setAddViewingModalVisible] = useState(false);
+    const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
+
+    // 加载客户数据
+    const loadCustomers = async (params?: Partial<CustomerFilterParams>) => {
+        setLoading(true);
+        try {
+            const searchParams = new URLSearchParams();
+            const finalParams = { ...filters, ...params };
+
+            Object.entries(finalParams).forEach(([key, value]) => {
+                if (value !== undefined && value !== null && value !== '') {
+                    searchParams.append(key, String(value));
+                }
+            });
+
+            const response = await fetch(`/api/customers?${searchParams.toString()}`);
+            const result: ApiResponse<PaginatedResponse<Customer>> = await response.json();
+
+            if (result.success && result.data) {
+                setCustomers(result.data.data);
+                setPagination(prev => ({
+                    ...prev,
+                    current: result.data!.page,
+                    total: result.data!.total,
+                    pageSize: result.data!.pageSize,
+                }));
+            } else {
+                message.error(result.error || '获取客户列表失败');
+            }
+        } catch (error) {
+            console.error('加载客户数据失败:', error);
+            message.error('网络请求失败');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadCustomers();
+    }, []);
+
+    // 搜索处理
+    const handleSearch = (values: any) => {
+        const newFilters = {
+            ...filters,
+            ...values,
+            page: 1, // 重置到第一页
+        };
+        setFilters(newFilters);
+        loadCustomers(newFilters);
+    };
+
+    // 重置搜索
+    const handleReset = () => {
+        form.resetFields();
+        const newFilters = {
+            page: 1,
+            pageSize: DEFAULT_PAGE_SIZE,
+        };
+        setFilters(newFilters);
+        loadCustomers(newFilters);
+    };
+
+    // 分页处理
+    const handleTableChange = (page: number, pageSize: number) => {
+        const newFilters = {
+            ...filters,
+            page,
+            pageSize,
+        };
+        setFilters(newFilters);
+        loadCustomers(newFilters);
+    };
+
+    // 查看客户详情
+    const handleViewCustomer = (customer: Customer) => {
+        setCurrentCustomer(customer);
+        setDetailModalVisible(true);
+    };
+
+    // 新增客户
+    const handleAddCustomer = () => {
+        setAddModalVisible(true);
+    };
+
+    // 新增客户成功回调
+    const handleAddSuccess = () => {
+        // 重新加载客户列表
+        loadCustomers(filters);
+    };
+
+    // 编辑客户
+    const handleEditCustomer = (customer: Customer) => {
+        setCurrentCustomer(customer);
+        setEditModalVisible(true);
+    };
+
+    // 编辑客户成功回调
+    const handleEditSuccess = () => {
+        // 重新加载客户列表
+        loadCustomers(filters);
+    };
+
+    // 添加带看记录
+    const handleAddViewing = (customer: Customer) => {
+        setCurrentCustomer(customer);
+        setAddViewingModalVisible(true);
+    };
+
+    // 添加带看记录成功回调
+    const handleAddViewingSuccess = () => {
+        // 重新加载客户列表以更新带看次数和佣金
+        loadCustomers(filters);
+    };
+
+    // 查看带看记录详情
+    const handleViewingDetails = (customer: Customer) => {
+        message.info(`查看客户 ${customer.name} 的带看记录详情功能正在开发中...`);
+        // TODO: 实现带看记录详情弹窗，显示该客户的所有带看记录
+    };
+
+    // 表格列定义
+    const columns: ColumnsType<Customer> = [
+        {
+            title: 'ID',
+            dataIndex: 'id',
+            key: 'id',
+            width: 80,
+        },
+        {
+            title: '租客姓名',
+            dataIndex: 'name',
+            key: 'name',
+            width: 120,
+        },
+        {
+            title: '手机号',
+            dataIndex: 'phone',
+            key: 'phone',
+            width: 130,
+            render: (phone: string) => formatPhone(phone),
+        },
+        {
+            title: '状态',
+            dataIndex: 'status',
+            key: 'status',
+            width: 120,
+            render: (status: number) => (
+                <Tag color={CUSTOMER_STATUS_COLOR[status as keyof typeof CUSTOMER_STATUS_COLOR]}>
+                    {CUSTOMER_STATUS_TEXT[status as keyof typeof CUSTOMER_STATUS_TEXT]}
+                </Tag>
+            ),
+        },
+        {
+            title: '咨询小区',
+            dataIndex: 'community',
+            key: 'community',
+            width: 150,
+        },
+        {
+            title: '需求房型',
+            key: 'requirement',
+            width: 200,
+            render: (_, record) => formatRequirement(record.business_type, record.room_type, record.room_tags),
+        },
+        {
+            title: '可接受价格',
+            dataIndex: 'price_range',
+            key: 'price_range',
+            width: 120,
+        },
+        {
+            title: '线索佣金',
+            dataIndex: 'total_commission',
+            key: 'total_commission',
+            width: 100,
+            render: (commission: number) => formatMoney(commission),
+        },
+        {
+            title: '带看次数',
+            dataIndex: 'viewing_count',
+            key: 'viewing_count',
+            width: 80,
+            render: (count: number, record: Customer) => (
+                <Button type="link" size="small" onClick={() => handleViewingDetails(record)}>
+                    {count}
+                </Button>
+            ),
+        },
+        {
+            title: '来源渠道',
+            dataIndex: 'source_channel',
+            key: 'source_channel',
+            width: 100,
+            render: (channel: string) => SOURCE_CHANNEL_TEXT[channel as keyof typeof SOURCE_CHANNEL_TEXT],
+        },
+        {
+            title: '录入人',
+            dataIndex: 'creator',
+            key: 'creator',
+            width: 100,
+        },
+        {
+            title: '操作',
+            key: 'actions',
+            width: 180,
+            fixed: 'right',
+            render: (_, record) => (
+                <div className="action-buttons">
+                    <Button
+                        type="text"
+                        icon={<EyeOutlined />}
+                        size="small"
+                        onClick={() => handleViewCustomer(record)}
+                        className="action-button primary"
+                    >
+                        查看
+                    </Button>
+                    <Button
+                        type="text"
+                        icon={<EditOutlined />}
+                        size="small"
+                        onClick={() => handleEditCustomer(record)}
+                        className="action-button primary"
+                    >
+                        编辑
+                    </Button>
+                    <Button
+                        type="text"
+                        icon={<CalendarOutlined />}
+                        size="small"
+                        onClick={() => handleAddViewing(record)}
+                        className="action-button success"
+                    >
+                        添加带看
+                    </Button>
+                </div>
+            ),
+        },
+    ];
+
+    return (
+        <MainLayout>
+            <div className="content-spacing">
+                {/* 页面标题 */}
+                <div className="page-header">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h1 className="page-title">客户管理</h1>
+                            <p className="page-description">管理所有客户信息和带看记录</p>
+                        </div>
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            size="large"
+                            onClick={handleAddCustomer}
+                            className="shadow-md hover:shadow-lg transition-shadow"
+                        >
+                            新增客户
+                        </Button>
+                    </div>
+                </div>
+
+                {/* 筛选面板 */}
+                <Card className="filter-panel">
+                    <Form
+                        form={form}
+                        onFinish={handleSearch}
+                        initialValues={filters}
+                        className="filter-form"
+                    >
+                        <div className="filter-row">
+                            <Form.Item name="name" label="客户姓名" className="flex-1 min-w-48">
+                                <Input placeholder="请输入客户姓名" allowClear />
+                            </Form.Item>
+                            <Form.Item name="phone" label="手机号" className="flex-1 min-w-48">
+                                <Input placeholder="请输入手机号" allowClear />
+                            </Form.Item>
+                            <Form.Item name="status" label="客户状态" className="min-w-40">
+                                <Select placeholder="请选择状态" allowClear>
+                                    {Object.entries(CUSTOMER_STATUS_TEXT).map(([value, label]) => (
+                                        <Option key={value} value={parseInt(value)}>
+                                            {label}
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                            <Form.Item name="source_channel" label="来源渠道" className="min-w-40">
+                                <Select placeholder="请选择渠道" allowClear>
+                                    {Object.entries(SOURCE_CHANNEL_TEXT).map(([value, label]) => (
+                                        <Option key={value} value={value}>
+                                            {label}
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                        </div>
+                        <div className="filter-row">
+                            <Form.Item name="business_type" label="业务类型" className="min-w-40">
+                                <Select placeholder="请选择类型" allowClear>
+                                    {Object.entries(BUSINESS_TYPE_TEXT).map(([value, label]) => (
+                                        <Option key={value} value={value}>
+                                            {label}
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                            <Form.Item name="community" label="咨询小区" className="flex-1 min-w-48">
+                                <Input placeholder="请输入小区名称" allowClear />
+                            </Form.Item>
+                            <Form.Item className="ml-auto">
+                                <Space size="middle">
+                                    <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
+                                        搜索
+                                    </Button>
+                                    <Button onClick={handleReset}>
+                                        重置
+                                    </Button>
+                                </Space>
+                            </Form.Item>
+                        </div>
+                    </Form>
+                </Card>
+
+                {/* 统计卡片 */}
+                <div className="stats-panel">
+                    <Row gutter={[24, 24]}>
+                        <Col xs={24} sm={12} lg={6}>
+                            <Card className="stats-card hover-card">
+                                <Statistic
+                                    title="总客户数"
+                                    value={pagination.total}
+                                    valueStyle={{ color: '#3b82f6' }}
+                                    prefix={<div className="w-2 h-2 bg-blue-500 rounded-full inline-block mr-2"></div>}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} lg={6}>
+                            <Card className="stats-card hover-card">
+                                <Statistic
+                                    title="跟进中"
+                                    value={customers.filter(c => c.status === 1).length}
+                                    valueStyle={{ color: '#10b981' }}
+                                    prefix={<div className="w-2 h-2 bg-green-500 rounded-full inline-block mr-2"></div>}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} lg={6}>
+                            <Card className="stats-card hover-card">
+                                <Statistic
+                                    title="已成交"
+                                    value={customers.filter(c => c.status === 4 || c.status === 5).length}
+                                    valueStyle={{ color: '#8b5cf6' }}
+                                    prefix={<div className="w-2 h-2 bg-purple-500 rounded-full inline-block mr-2"></div>}
+                                />
+                            </Card>
+                        </Col>
+                        <Col xs={24} sm={12} lg={6}>
+                            <Card className="stats-card hover-card">
+                                <Statistic
+                                    title="总佣金"
+                                    value={customers.reduce((sum, c) => sum + c.total_commission, 0)}
+                                    precision={2}
+                                    suffix="元"
+                                    valueStyle={{ color: '#f59e0b' }}
+                                    prefix={<div className="w-2 h-2 bg-amber-500 rounded-full inline-block mr-2"></div>}
+                                />
+                            </Card>
+                        </Col>
+                    </Row>
+                </div>
+
+                {/* 客户列表 */}
+                <Card className="table-container">
+                    <Table
+                        columns={columns}
+                        dataSource={customers}
+                        rowKey="id"
+                        loading={loading}
+                        pagination={false}
+                        scroll={{ x: 1500 }}
+                        size="middle"
+                        className="custom-scrollbar"
+                    />
+
+                    <div className="pagination-container">
+                        <div className="pagination-info">
+                            显示第 {(pagination.current - 1) * pagination.pageSize + 1} - {Math.min(pagination.current * pagination.pageSize, pagination.total)} 条，共 {pagination.total} 条记录
+                        </div>
+                        <Pagination
+                            current={pagination.current}
+                            pageSize={pagination.pageSize}
+                            total={pagination.total}
+                            showSizeChanger
+                            showQuickJumper
+                            onChange={handleTableChange}
+                            onShowSizeChange={handleTableChange}
+                        />
+                    </div>
+                </Card>
+
+                {/* 客户详情模态框 */}
+                <CustomerDetailModal
+                    visible={detailModalVisible}
+                    customer={currentCustomer}
+                    onCancel={() => {
+                        setDetailModalVisible(false);
+                        setCurrentCustomer(null);
+                    }}
+                />
+
+                {/* 添加带看记录模态框 */}
+                <AddViewingModal
+                    visible={addViewingModalVisible}
+                    customer={currentCustomer}
+                    onCancel={() => {
+                        setAddViewingModalVisible(false);
+                        setCurrentCustomer(null);
+                    }}
+                    onSuccess={handleAddViewingSuccess}
+                />
+
+                {/* 新增客户模态框 */}
+                <AddCustomerModal
+                    visible={addModalVisible}
+                    onCancel={() => setAddModalVisible(false)}
+                    onSuccess={handleAddSuccess}
+                />
+
+                {/* 编辑客户模态框 */}
+                <EditCustomerModal
+                    visible={editModalVisible}
+                    customer={currentCustomer}
+                    onCancel={() => {
+                        setEditModalVisible(false);
+                        setCurrentCustomer(null);
+                    }}
+                    onSuccess={handleEditSuccess}
+                />
+            </div>
+        </MainLayout>
+    );
+} 

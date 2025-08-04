@@ -1,0 +1,38 @@
+{
+  "name": "crm-system",
+  "version": "1.0.0",
+  "description": "房产中介CRM客户关系管理系统",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:setup": "node scripts/setup-database.js"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.2.6",
+    "@ant-design/nextjs-registry": "^1.1.0",
+    "@types/node": "^20.8.0",
+    "@types/react": "^18.2.25",
+    "@types/react-dom": "^18.2.11",
+    "antd": "^5.11.0",
+    "clsx": "^2.0.0",
+    "dayjs": "^1.11.10",
+    "lucide-react": "^0.290.0",
+    "next": "^14.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.6",
+    "typescript": "^5.2.2"
+  },
+  "devDependencies": {
+    "@types/sqlite3": "^3.1.11",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.51.0",
+    "eslint-config-next": "^14.0.0",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5"
+  }
+}
