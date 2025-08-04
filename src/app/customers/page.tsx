@@ -27,6 +27,7 @@ const { Option } = Select;
 export default function CustomersPage() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(false);
+    const [totalCommission, setTotalCommission] = useState(0); // 总佣金
     const [pagination, setPagination] = useState({
         current: 1,
         pageSize: DEFAULT_PAGE_SIZE,
@@ -67,6 +68,7 @@ export default function CustomersPage() {
 
             if (result.success && result.data) {
                 setCustomers(result.data.data);
+                setTotalCommission(result.data.totalCommission || 0); // 设置总佣金
                 setPagination(prev => ({
                     ...prev,
                     current: result.data!.page,
@@ -331,7 +333,7 @@ export default function CustomersPage() {
                             <Card className="stats-card hover-card">
                                 <Statistic
                                     title="总佣金"
-                                    value={customers.reduce((sum, c) => sum + c.total_commission, 0)}
+                                    value={totalCommission}
                                     precision={2}
                                     suffix="元"
                                     valueStyle={{ color: '#f59e0b' }}

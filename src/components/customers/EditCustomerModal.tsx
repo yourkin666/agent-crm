@@ -105,7 +105,6 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
               <Form.Item
                 name="name"
                 label="客户姓名"
-                rules={[{ required: true, message: '请输入客户姓名' }]}
               >
                 <Input placeholder="请输入客户姓名" />
               </Form.Item>
@@ -114,7 +113,6 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
               <Form.Item
                 name="status"
                 label="客户状态"
-                rules={[{ required: true, message: '请选择客户状态' }]}
               >
                 <Select placeholder="请选择客户状态">
                   {Object.entries(CUSTOMER_STATUS_TEXT).map(([value, label]) => (
@@ -158,7 +156,6 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
               <Form.Item
                 name="community"
                 label="咨询小区"
-                rules={[{ required: true, message: '请输入咨询小区' }]}
               >
                 <Input placeholder="请输入咨询小区名称" />
               </Form.Item>
@@ -167,7 +164,7 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
               <Form.Item
                 name="business_type"
                 label="需求户型（业务类型）"
-                rules={[{ required: true, message: '请选择业务类型' }]}
+
               >
                 <Select placeholder="请选择业务类型">
                   {Object.entries(BUSINESS_TYPE_TEXT).map(([value, label]) => (
@@ -207,7 +204,7 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
               <Form.Item
                 name="source_channel"
                 label="来源渠道"
-                rules={[{ required: true, message: '请选择来源渠道' }]}
+
               >
                 <Select placeholder="请选择来源渠道">
                   {Object.entries(SOURCE_CHANNEL_TEXT).map(([value, label]) => (
@@ -246,7 +243,7 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
         <div style={{ display: 'none' }}>
           <Form.Item
             name="room_type"
-            rules={[{ required: true, message: '请选择房型' }]}
+            
             initialValue="one_bedroom"
           >
             <Input type="hidden" />

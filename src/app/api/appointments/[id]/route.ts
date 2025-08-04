@@ -29,14 +29,6 @@ export async function PUT(
       city
     } = body;
 
-    // 验证必填字段
-    if (!property_name || !property_address || !customer_name || !customer_phone || !agent_name || !appointment_time || !type) {
-      return NextResponse.json(
-        { success: false, error: '请填写所有必填字段' },
-        { status: 400 }
-      );
-    }
-
     // 检查预约是否存在
     const existingAppointment = await db.get(`
       SELECT * FROM appointments WHERE id = ?
@@ -49,7 +41,7 @@ export async function PUT(
       );
     }
 
-    // 更新预约信息
+    // 更新预约信息，为空字段提供默认值
     await db.run(`
       UPDATE appointments 
       SET 
@@ -65,15 +57,15 @@ export async function PUT(
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `, [
-      property_name,
-      property_address,
-      customer_name,
-      customer_phone,
-      agent_name,
-      appointment_time,
+      property_name || existingAppointment.property_name || '未填写',
+      property_address || existingAppointment.property_address || '未填写',
+      customer_name || existingAppointment.customer_name || '未填写',
+      customer_phone || existingAppointment.customer_phone,
+      agent_name || existingAppointment.agent_name || '未填写',
+      appointment_time || existingAppointment.appointment_time,
       status || existingAppointment.status,
-      type,
-      city,
+      type || existingAppointment.type || 'whole_rent',
+      city || existingAppointment.city,
       appointmentId
     ]);
 

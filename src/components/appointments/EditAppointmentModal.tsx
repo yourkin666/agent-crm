@@ -47,7 +47,7 @@ export default function EditAppointmentModal({ visible, appointment, onCancel, o
         },
         body: JSON.stringify({
           ...values,
-          appointment_time: values.appointment_time.toISOString(),
+          appointment_time: values.appointment_time ? values.appointment_time.toISOString() : null,
         }),
       });
 
@@ -95,7 +95,6 @@ export default function EditAppointmentModal({ visible, appointment, onCancel, o
             <Form.Item
               name="property_name"
               label="物业名称"
-              rules={[{ required: true, message: '请输入物业名称' }]}
             >
               <Input placeholder="请输入物业名称" />
             </Form.Item>
@@ -104,7 +103,6 @@ export default function EditAppointmentModal({ visible, appointment, onCancel, o
             <Form.Item
               name="property_address"
               label="房间地址"
-              rules={[{ required: true, message: '请输入房间地址' }]}
             >
               <Input placeholder="请输入详细地址" />
             </Form.Item>
@@ -116,7 +114,6 @@ export default function EditAppointmentModal({ visible, appointment, onCancel, o
             <Form.Item
               name="customer_name"
               label="客户姓名"
-              rules={[{ required: true, message: '请输入客户姓名' }]}
             >
               <Input placeholder="请输入客户姓名" />
             </Form.Item>
@@ -126,7 +123,6 @@ export default function EditAppointmentModal({ visible, appointment, onCancel, o
               name="customer_phone"
               label="客户电话"
               rules={[
-                { required: true, message: '请输入客户电话' },
                 { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式' }
               ]}
             >
@@ -140,7 +136,6 @@ export default function EditAppointmentModal({ visible, appointment, onCancel, o
             <Form.Item
               name="agent_name"
               label="经纪人"
-              rules={[{ required: true, message: '请输入经纪人姓名' }]}
             >
               <Input placeholder="请输入经纪人姓名" />
             </Form.Item>
@@ -149,7 +144,6 @@ export default function EditAppointmentModal({ visible, appointment, onCancel, o
             <Form.Item
               name="appointment_time"
               label="预约时间"
-              rules={[{ required: true, message: '请选择预约时间' }]}
             >
               <DatePicker
                 showTime
@@ -167,7 +161,6 @@ export default function EditAppointmentModal({ visible, appointment, onCancel, o
             <Form.Item
               name="type"
               label="业务类型"
-              rules={[{ required: true, message: '请选择业务类型' }]}
             >
               <Select placeholder="请选择业务类型">
                 {Object.entries(BUSINESS_TYPE_TEXT).map(([value, label]) => (
@@ -182,7 +175,6 @@ export default function EditAppointmentModal({ visible, appointment, onCancel, o
             <Form.Item
               name="status"
               label="预约状态"
-              rules={[{ required: true, message: '请选择预约状态' }]}
             >
               <Select placeholder="请选择预约状态">
                 {Object.entries(APPOINTMENT_STATUS_TEXT).map(([value, label]) => (

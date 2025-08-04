@@ -183,27 +183,26 @@ export async function POST(request: NextRequest) {
       notes = ''
     } = body;
 
-    // 验证必填字段
-    if (!property_name || !property_address || !customer_name || !customer_phone || !agent_name || !appointment_time || !type) {
-      return NextResponse.json(
-        { success: false, error: '请填写所有必填字段' },
-        { status: 400 }
-      );
-    }
-
     // 开始事务
     await db.run('BEGIN TRANSACTION');
 
     try {
-      // 插入预约记录
+      // 插入预约记录，为必填字段提供默认值
       const appointmentResult = await db.run(`
         INSERT INTO appointments (
           property_name, property_address, customer_name, customer_phone,
-          agent_name, appointment_time, status, type, city, is_converted
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          agent_name, appointment_time, status, type, city
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        property_name, property_address, customer_name, customer_phone,
-        agent_name, appointment_time, status, type, city, create_viewing_record ? 1 : 0
+        property_name || '未填写',                                    // 默认物业名称
+        property_address || '未填写',                                 // 默认地址
+        customer_name || '未填写',                                    // 默认客户姓名
+        customer_phone || null,                                      // 客户电话可为空
+        agent_name || '未填写',                                       // 默认经纪人
+        appointment_time || new Date().toISOString(),                // 默认为当前时间
+        status,
+        type || 'whole_rent',                                        // 默认业务类型
+        city || null
       ]);
 
       let viewingRecordId = null;
@@ -241,9 +240,9 @@ export async function POST(request: NextRequest) {
         const viewingResult = await db.run(`
           INSERT INTO viewing_records (
             customer_id, viewing_time, property_name, property_address,
-            room_type, room_tag, viewer_name, viewer_type,
+            room_type, room_tag, viewer_name,
             viewing_status, commission, viewing_feedback, business_type, notes
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 4, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, 4, ?, ?, ?, ?)
         `, [
           customerId,
           appointment_time,
@@ -251,7 +250,6 @@ export async function POST(request: NextRequest) {
           property_address,
           'one_bedroom', // 默认房型
           null,
-          agent_name,
           'internal', // 默认内部经纪人
           commission,
           viewing_feedback,

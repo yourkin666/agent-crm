@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
       room_type,
       room_tag,
       viewer_name,
-      viewer_type,
       viewing_status = 1, // 默认为待确认
       commission = 0,
       viewing_feedback,
@@ -22,10 +21,10 @@ export async function POST(request: NextRequest) {
       notes
     } = body;
 
-    // 验证必填字段
-    if (!customer_id || !viewing_time || !property_name || !room_type || !viewer_name || !viewer_type || !business_type) {
+    // 只验证核心必填字段：客户ID
+    if (!customer_id) {
       return NextResponse.json(
-        { success: false, error: '请填写所有必填字段' },
+        { success: false, error: '客户ID是必填字段' },
         { status: 400 }
       );
     }
@@ -43,17 +42,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 插入带看记录
+    // 插入带看记录，为必填字段提供默认值
     const result = await db.run(`
       INSERT INTO viewing_records (
         customer_id, viewing_time, property_name, property_address,
-        room_type, room_tag, viewer_name, viewer_type, 
+        room_type, room_tag, viewer_name, 
         viewing_status, commission, viewing_feedback, business_type, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      customer_id, viewing_time, property_name, property_address,
-      room_type, room_tag, viewer_name, viewer_type,
-      viewing_status, commission, viewing_feedback, business_type, notes
+      customer_id, 
+      viewing_time || new Date().toISOString(),    // 默认为当前时间
+      property_name || '未填写楼盘',                // 默认楼盘名
+      property_address,
+      room_type || 'one_bedroom',                  // 默认房型
+      room_tag, 
+      viewer_name || 'internal',                   // 默认带看人类型
+      viewing_status, 
+      commission, 
+      viewing_feedback, 
+      business_type || 'whole_rent',               // 默认业务类型
+      notes
     ]);
 
     if (result.lastID) {

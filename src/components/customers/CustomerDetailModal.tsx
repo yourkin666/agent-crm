@@ -83,6 +83,7 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
       dataIndex: 'viewer_name',
       key: 'viewer_name',
       width: 80,
+      render: (type: string) => (VIEWER_TYPE_TEXT_BY_STRING as Record<string, string>)[type] || type,
     },
     {
       title: '状态',

@@ -52,14 +52,16 @@ export async function POST(request: NextRequest) {
             // 创建带看记录
             await db.run(`
               INSERT INTO viewing_records (
-                customer_id, business_type, room_type, room_tag,
-                viewer_name, viewer_type, viewing_status, viewing_feedback,
+                customer_id, viewing_time, property_name, business_type, room_type, room_tag,
+                viewer_name, viewing_status, viewing_feedback,
                 commission, notes
-              ) VALUES (?, ?, 'one_bedroom', NULL, ?, 'internal', 4, 1, 0, ?)
+              ) VALUES (?, ?, ?, ?, 'one_bedroom', NULL, ?, 4, 1, 0, ?)
             `, [
               customerId,
+              appointment.appointment_time, // 使用预约时间作为带看时间
+              appointment.property_name,    // 添加楼盘名称
               appointment.type,
-              appointment.agent_name,
+              'internal',
               `从预约 "${appointment.property_name}" 同步转化`
             ]);
             syncResults.createdViewingRecords++;

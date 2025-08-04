@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS customers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,                    -- 租客姓名
-  phone TEXT NOT NULL UNIQUE,            -- 主手机号 (唯一)
+  phone TEXT UNIQUE,                     -- 主手机号 (唯一，但可为空)
   backup_phone TEXT,                     -- 备用手机
   wechat TEXT,                          -- 微信
   status INTEGER NOT NULL DEFAULT 1,     -- 状态 (1=跟进中, 2=客户不再回复, 3=已约带看, 4=已成交未结佣, 5=已成交已结佣)
@@ -32,8 +32,7 @@ CREATE TABLE IF NOT EXISTS viewing_records (
   property_address TEXT,                 -- 楼盘地址
   room_type TEXT NOT NULL,               -- 带看户型
   room_tag TEXT,                         -- 房型标签
-  viewer_name TEXT NOT NULL,             -- 带看人
-  viewer_type TEXT NOT NULL,             -- 带看人类型 (internal, external, external_sales, creator)
+  viewer_name TEXT NOT NULL,             -- 带看人 (internal, external, external_sales, creator)
   viewing_status INTEGER NOT NULL DEFAULT 1, -- 带看状态 (1=待确认, 2=已确认, 3=已取消, 4=已带看)
   commission DECIMAL(10,2) DEFAULT 0,    -- 带看佣金
   viewing_feedback INTEGER,              -- 带看反馈 (0=未成交, 1=已成交)
@@ -47,14 +46,14 @@ CREATE TABLE IF NOT EXISTS viewing_records (
 -- 预约带看表
 CREATE TABLE IF NOT EXISTS appointments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  property_name TEXT NOT NULL,           -- 物业名称
-  property_address TEXT NOT NULL,        -- 房间地址
-  customer_name TEXT NOT NULL,           -- 客户姓名
-  customer_phone TEXT NOT NULL,          -- 客户电话
-  agent_name TEXT NOT NULL,              -- 经纪人
-  appointment_time DATETIME NOT NULL,    -- 预约时间
+  property_name TEXT,                    -- 物业名称
+  property_address TEXT,                 -- 房间地址
+  customer_name TEXT,                    -- 客户姓名
+  customer_phone TEXT,                   -- 客户电话
+  agent_name TEXT,                       -- 经纪人
+  appointment_time DATETIME,             -- 预约时间
   status INTEGER NOT NULL DEFAULT 1,     -- 状态 (1=待确认, 2=已确认, 3=进行中, 4=已完成, 5=已取消)
-  type TEXT NOT NULL,                    -- 类型 (whole_rent, centralized, shared_rent)
+  type TEXT,                            -- 类型 (whole_rent, centralized, shared_rent)
   city TEXT,                            -- 城市
   is_converted BOOLEAN DEFAULT 0,        -- 是否已转化为带看记录
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,

@@ -95,7 +95,6 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
             <Form.Item
               name="viewing_time"
               label="带看时间"
-              rules={[{ required: true, message: '请选择带看时间' }]}
             >
               <DatePicker
                 showTime
@@ -109,7 +108,6 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
             <Form.Item
               name="property_name"
               label="带看楼盘"
-              rules={[{ required: true, message: '请输入带看楼盘' }]}
             >
               <Input placeholder="请输入楼盘名称" />
             </Form.Item>
@@ -128,7 +126,6 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
             <Form.Item
               name="business_type"
               label="业务类型"
-              rules={[{ required: true, message: '请选择业务类型' }]}
             >
               <Select placeholder="请选择业务类型">
                 {Object.entries(BUSINESS_TYPE_TEXT_BY_STRING).map(([key, value]) => (
@@ -141,7 +138,6 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
             <Form.Item
               name="room_type"
               label="带看户型"
-              rules={[{ required: true, message: '请选择带看户型' }]}
             >
               <Select placeholder="请选择户型">
                 {Object.entries(ROOM_TYPE_TEXT_BY_STRING).map(([key, value]) => (
@@ -169,9 +165,12 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
             <Form.Item
               name="viewer_name"
               label="带看人"
-              rules={[{ required: true, message: '请输入带看人姓名' }]}
             >
-              <Input placeholder="请输入带看人姓名" />
+              <Select placeholder="请选择带看人">
+                {Object.entries(VIEWER_TYPE_TEXT_BY_STRING).map(([key, value]) => (
+                  <Option key={key} value={key}>{value}</Option>
+                ))}
+              </Select>
             </Form.Item>
           </Col>
         </Row>
@@ -179,22 +178,8 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item
-              name="viewer_type"
-              label="带看人类型"
-              rules={[{ required: true, message: '请选择带看人类型' }]}
-            >
-              <Select placeholder="请选择带看人类型">
-                {Object.entries(VIEWER_TYPE_TEXT_BY_STRING).map(([key, value]) => (
-                  <Option key={key} value={key}>{value}</Option>
-                ))}
-              </Select>
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
               name="viewing_status"
               label="带看状态"
-              rules={[{ required: true, message: '请选择带看状态' }]}
             >
               <Select placeholder="请选择带看状态">
                 {Object.entries(VIEWING_STATUS_TEXT).map(([key, value]) => (
@@ -203,9 +188,6 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
               </Select>
             </Form.Item>
           </Col>
-        </Row>
-
-        <Row gutter={16}>
           <Col span={12}>
             <Form.Item
               name="commission"
@@ -224,6 +206,9 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
               />
             </Form.Item>
           </Col>
+        </Row>
+
+        <Row gutter={16}>
           <Col span={12}>
             <Form.Item
               name="viewing_feedback"

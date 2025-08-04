@@ -37,7 +37,6 @@ export async function GET(
         vr.room_type,
         vr.room_tag,
         vr.viewer_name,
-        vr.viewer_type,
         vr.viewing_status,
         vr.commission,
         vr.viewing_feedback,
@@ -65,7 +64,6 @@ export async function GET(
         'unknown' as room_type,
         'unknown' as room_tag,
         a.agent_name as viewer_name,
-        'internal' as viewer_type,
         CASE 
           WHEN a.status = 4 THEN 4  -- 已完成
           WHEN a.status = 3 THEN 3  -- 已取消

@@ -59,15 +59,15 @@ export async function PUT(
       const viewingResult = await db.run(`
         INSERT INTO viewing_records (
           customer_id, viewing_time, property_name, property_address,
-          room_type, room_tag, viewer_name, viewer_type, 
+          room_type, room_tag, viewer_name, 
           viewing_status, commission, viewing_feedback, business_type, notes
-        ) VALUES (?, ?, ?, ?, 'one_bedroom', NULL, ?, 'internal', 4, 0, 1, ?, ?)
+        ) VALUES (?, ?, ?, ?, 'one_bedroom', NULL, ?, 4, 0, 1, ?, ?)
       `, [
         customerId,
         appointment.appointment_time,
         appointment.property_name,
         appointment.property_address,
-        appointment.agent_name,
+        'internal',
         appointment.type,
         `从预约 "${appointment.property_name}" 转化而来`
       ]);

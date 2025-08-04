@@ -112,11 +112,15 @@ export async function GET(request: NextRequest) {
       filters.pageSize
     );
 
+    // 计算符合筛选条件的总佣金
+    const totalCommissionQuery = `SELECT COALESCE(SUM(total_commission), 0) as total_commission FROM customers ${whereClause}`;
+    const totalCommissionResult = await dbManager.queryOne<{ total_commission: number }>(totalCommissionQuery, params);
+
     // 处理数据格式
     const customers: Customer[] = result.data.map((row: any) => ({
       ...row,
       room_tags: parseRoomTags(row.room_tags),
-      is_agent: Boolean(row.is_agent),
+      is_agent: Boolean(row.is_agent)
     }));
 
     const response: ApiResponse<PaginatedResponse<Customer>> = {
@@ -124,6 +128,7 @@ export async function GET(request: NextRequest) {
       data: {
         ...result,
         data: customers,
+        totalCommission: totalCommissionResult?.total_commission || 0
       },
     };
 
@@ -143,31 +148,22 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // 验证必填字段
-    const requiredFields = ['name', 'phone', 'community', 'business_type', 'room_type', 'source_channel', 'creator'];
-    for (const field of requiredFields) {
-      if (!body[field]) {
+    // 如果提供了手机号，检查是否已存在
+    if (body.phone) {
+      const existingCustomer = await dbManager.queryOne(
+        'SELECT id FROM customers WHERE phone = ?',
+        [body.phone]
+      );
+
+      if (existingCustomer) {
         return NextResponse.json(
-          { success: false, error: `缺少必填字段: ${field}` },
+          { success: false, error: '该手机号已存在' },
           { status: 400 }
         );
       }
     }
 
-    // 检查手机号是否已存在
-    const existingCustomer = await dbManager.queryOne(
-      'SELECT id FROM customers WHERE phone = ?',
-      [body.phone]
-    );
-
-    if (existingCustomer) {
-      return NextResponse.json(
-        { success: false, error: '该手机号已存在' },
-        { status: 400 }
-      );
-    }
-
-    // 插入新客户
+    // 插入新客户，为必填字段提供默认值
     const insertSql = `
       INSERT INTO customers (
         name, phone, backup_phone, wechat, status, community,
@@ -177,20 +173,20 @@ export async function POST(request: NextRequest) {
     `;
 
     const params = [
-      body.name,
-      body.phone,
+      body.name || '未填写',                    // 默认姓名
+      body.phone || null,                       // 手机号可以为空
       body.backup_phone || null,
       body.wechat || null,
-      body.status || 1, // 默认为跟进中
-      body.community,
-      body.business_type,
-      body.room_type,
+      body.status || 1,                        // 默认为跟进中
+      body.community || '未填写',               // 默认小区
+      body.business_type || 'whole_rent',       // 默认业务类型：整租
+      body.room_type || 'one_bedroom',          // 默认房型：一居室
       body.room_tags ? JSON.stringify(body.room_tags) : null,
       body.move_in_date || null,
       body.lease_period || null,
       body.price_range || null,
-      body.source_channel,
-      body.creator,
+      body.source_channel || 'referral',       // 默认来源：转介绍
+      body.creator || '系统',                   // 默认录入人
       body.is_agent !== undefined ? body.is_agent : true,
     ];
 
@@ -234,15 +230,12 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // 验证必填字段
-    const requiredFields = ['id', 'name', 'phone', 'community', 'business_type', 'room_type', 'source_channel'];
-    for (const field of requiredFields) {
-      if (!body[field]) {
-        return NextResponse.json(
-          { success: false, error: `缺少必填字段: ${field}` },
-          { status: 400 }
-        );
-      }
+    // 只验证核心必填字段：客户ID
+    if (!body.id) {
+      return NextResponse.json(
+        { success: false, error: '客户ID是必填字段' },
+        { status: 400 }
+      );
     }
 
     // 检查客户是否存在
@@ -258,17 +251,19 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // 检查手机号是否被其他客户使用
-    const phoneCheck = await dbManager.queryOne(
-      'SELECT id FROM customers WHERE phone = ? AND id != ?',
-      [body.phone, body.id]
-    );
-
-    if (phoneCheck) {
-      return NextResponse.json(
-        { success: false, error: '该手机号已被其他客户使用' },
-        { status: 400 }
+    // 如果提供了手机号，检查是否被其他客户使用
+    if (body.phone) {
+      const phoneCheck = await dbManager.queryOne(
+        'SELECT id FROM customers WHERE phone = ? AND id != ?',
+        [body.phone, body.id]
       );
+
+      if (phoneCheck) {
+        return NextResponse.json(
+          { success: false, error: '该手机号已被其他客户使用' },
+          { status: 400 }
+        );
+      }
     }
 
     // 更新客户信息
@@ -281,19 +276,19 @@ export async function PUT(request: NextRequest) {
     `;
 
     const params = [
-      body.name,
-      body.phone,
+      body.name || '未填写',                    // 默认姓名
+      body.phone || null,                       // 手机号可以为空
       body.backup_phone || null,
       body.wechat || null,
       body.status || 1,
-      body.community,
-      body.business_type,
-      body.room_type,
+      body.community || '未填写',               // 默认小区
+      body.business_type || 'whole_rent',       // 默认业务类型
+      body.room_type || 'one_bedroom',          // 默认房型
       body.room_tags ? JSON.stringify(body.room_tags) : null,
       body.move_in_date || null,
       body.lease_period || null,
       body.price_range || null,
-      body.source_channel,
+      body.source_channel || 'referral',       // 默认来源
       body.is_agent !== undefined ? body.is_agent : true,
       body.id,
     ];

@@ -171,7 +171,7 @@ export const LEASE_PERIOD_TEXT = {
 };
 
 // 默认分页大小
-export const DEFAULT_PAGE_SIZE = 20;
+export const DEFAULT_PAGE_SIZE = 8;
 
 // 表格列的默认宽度
 export const DEFAULT_COLUMN_WIDTH = {

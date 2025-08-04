@@ -64,21 +64,37 @@ async function setupDatabase() {
     // 插入示例带看记录数据
     const insertViewingRecordSQL = `
       INSERT INTO viewing_records (
-        customer_id, business_type, room_type, room_tag, viewer_name, 
-        viewer_type, viewing_status, viewing_feedback, commission, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        customer_id, viewing_time, property_name, property_address,
+        room_type, room_tag, viewer_name, viewing_status, viewing_feedback, commission, notes, business_type
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    const sampleViewingRecords = [
-      [1, 'whole_rent', 'two_bedroom', 'flat', '李管家', 'internal', 4, 0, 1000, '客户对房子比较满意，但价格略高'],
-      [1, 'whole_rent', 'two_bedroom', 'two_bath', '李管家', 'internal', 4, 1, 1500, '客户非常满意，已签约'],
-      [2, 'shared_rent', 'master_room', 'loft', '王管家', 'internal', 2, null, 800, '已确认带看时间'],
-      [3, 'centralized', 'one_bedroom', 'studio', '赵管家', 'external', 4, 0, 600, '房间采光不好，客户不满意'],
-      [5, 'shared_rent', 'second_room', 'flat', '王管家', 'internal', 4, 1, 700, '客户很满意，当场签约'],
-    ];
+    const stmt = db.prepare(`
+      INSERT INTO viewing_records (
+        customer_id, viewing_time, property_name, property_address,
+        room_type, room_tag, viewer_name, viewing_status, viewing_feedback, commission, notes, business_type
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
 
-    for (const record of sampleViewingRecords) {
-      await db.run(insertViewingRecordSQL, record);
+    for (let i = 1; i <= 20; i++) {
+      const customerId = Math.ceil(Math.random() * 30);
+      const viewingDate = new Date(2024, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1);
+      const viewerTypes = ['internal', 'external', 'external_sales', 'creator'];
+      
+      stmt.run([
+        customerId,
+        viewingDate.toISOString(),
+        `测试楼盘${i}`,
+        `测试地址${i}号`,
+        ['one_bedroom', 'two_bedroom', 'three_bedroom'][Math.floor(Math.random() * 3)],
+        ['studio', 'loft', 'flat', null][Math.floor(Math.random() * 4)],
+        viewerTypes[Math.floor(Math.random() * viewerTypes.length)],
+        Math.floor(Math.random() * 4) + 1,
+        Math.floor(Math.random() * 2),
+        Math.floor(Math.random() * 5000) + 1000,
+        `测试备注${i}`,
+        ['whole_rent', 'centralized', 'shared_rent'][Math.floor(Math.random() * 3)]
+      ]);
     }
 
     // 插入示例预约带看数据

@@ -120,8 +120,7 @@ export interface ViewingRecord {
   business_type: BusinessType;     // 业务类型
   room_type: RoomType;             // 房型
   room_tag?: RoomTag;              // 房型标签
-  viewer_name: string;             // 带看人
-  viewer_type: ViewerType;         // 带看人类型
+  viewer_name: ViewerType;         // 带看人
   viewing_status: ViewingStatus;   // 带看状态
   viewing_feedback?: ViewingFeedback; // 带看反馈
   commission: number;              // 佣金
@@ -167,6 +166,7 @@ export interface PaginatedResponse<T> {
   page: number;
   pageSize: number;
   totalPages: number;
+  totalCommission?: number; // 符合筛选条件的总佣金
 }
 
 // 筛选参数接口

@@ -86,7 +86,6 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
             <Form.Item
               name="name"
               label="租客姓名"
-              rules={[{ required: true, message: '请输入租客姓名' }]}
             >
               <Input placeholder="请输入租客姓名" />
             </Form.Item>
@@ -96,7 +95,6 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
               name="phone"
               label="手机号"
               rules={[
-                { required: true, message: '请输入手机号' },
                 { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式' }
               ]}
             >
@@ -123,7 +121,6 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
             <Form.Item
               name="community"
               label="咨询小区"
-              rules={[{ required: true, message: '请输入咨询小区' }]}
             >
               <Input placeholder="请输入咨询小区名称" />
             </Form.Item>
@@ -132,7 +129,6 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
             <Form.Item
               name="status"
               label="客户状态"
-              rules={[{ required: true, message: '请选择客户状态' }]}
             >
               <Select placeholder="请选择客户状态">
                 {Object.entries(CUSTOMER_STATUS_TEXT).map(([value, label]) => (
@@ -150,13 +146,10 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
             <Form.Item
               name="business_type"
               label="业务类型"
-              rules={[{ required: true, message: '请选择业务类型' }]}
             >
               <Select placeholder="请选择业务类型">
-                {Object.entries(BUSINESS_TYPE_TEXT).map(([value, label]) => (
-                  <Option key={value} value={value}>
-                    {label}
-                  </Option>
+                {Object.entries(BUSINESS_TYPE_TEXT).map(([key, value]) => (
+                  <Option key={key} value={key}>{value}</Option>
                 ))}
               </Select>
             </Form.Item>
@@ -164,29 +157,27 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
           <Col span={8}>
             <Form.Item
               name="room_type"
-              label="房型"
-              rules={[{ required: true, message: '请选择房型' }]}
+              label="户型需求"
             >
-              <Select placeholder="请选择房型">
-                {Object.entries(ROOM_TYPE_TEXT).map(([value, label]) => (
-                  <Option key={value} value={value}>
-                    {label}
-                  </Option>
+              <Select placeholder="请选择户型">
+                {Object.entries(ROOM_TYPE_TEXT).map(([key, value]) => (
+                  <Option key={key} value={key}>{value}</Option>
                 ))}
               </Select>
             </Form.Item>
           </Col>
           <Col span={8}>
-            <Form.Item name="room_tags" label="房型标签">
+            <Form.Item
+              name="room_tags"
+              label="房型标签"
+            >
               <Select
                 mode="multiple"
-                placeholder="请选择房型标签"
+                placeholder="选择房型标签"
                 allowClear
               >
-                {Object.entries(ROOM_TAG_TEXT).map(([value, label]) => (
-                  <Option key={value} value={value}>
-                    {label}
-                  </Option>
+                {Object.entries(ROOM_TAG_TEXT).map(([key, value]) => (
+                  <Option key={key} value={key}>{value}</Option>
                 ))}
               </Select>
             </Form.Item>
@@ -226,15 +217,20 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
             <Form.Item
               name="source_channel"
               label="来源渠道"
-              rules={[{ required: true, message: '请选择来源渠道' }]}
             >
               <Select placeholder="请选择来源渠道">
-                {Object.entries(SOURCE_CHANNEL_TEXT).map(([value, label]) => (
-                  <Option key={value} value={value}>
-                    {label}
-                  </Option>
+                {Object.entries(SOURCE_CHANNEL_TEXT).map(([key, value]) => (
+                  <Option key={key} value={key}>{value}</Option>
                 ))}
               </Select>
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              name="creator"
+              label="录入人"
+            >
+              <Input placeholder="请输入录入人" />
             </Form.Item>
           </Col>
         </Row>
