@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../lib/database';
 import { Appointment, AppointmentFilterParams, PaginatedResponse, ApiResponse } from '../../../types';
+import { DEFAULT_PAGE_SIZE } from '../../../utils/constants';
 import { 
   withErrorHandler, 
   createSuccessResponse, 
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     
     const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || '20');
+    const pageSize = parseInt(searchParams.get('pageSize') || DEFAULT_PAGE_SIZE.toString());
     const offset = (page - 1) * pageSize;
 
     // 获取筛选参数

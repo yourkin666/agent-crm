@@ -1,0 +1,449 @@
+import pino from 'pino';
+import fs from 'fs';
+import path from 'path';
+
+/**
+ * 日志级别配置
+ */
+export const LOG_LEVELS = {
+  fatal: 60,
+  error: 50,
+  warn: 40,
+  info: 30,
+  debug: 20,
+  trace: 10,
+} as const;
+
+/**
+ * 日志级别中文标签映射
+ */
+export const LOG_LEVEL_LABELS: Record<number, string> = {
+  60: '严重错误',
+  50: '错误',
+  40: '警告', 
+  30: '信息',
+  20: '调试',
+  10: '跟踪',
+};
+
+/**
+ * 获取当前环境的日志级别
+ */
+function getLogLevel(): keyof typeof LOG_LEVELS {
+  const env = process.env.NODE_ENV;
+  const logLevel = process.env.LOG_LEVEL;
+
+  // 如果明确设置了 LOG_LEVEL 环境变量，使用该值
+  if (logLevel && logLevel in LOG_LEVELS) {
+    return logLevel as keyof typeof LOG_LEVELS;
+  }
+
+  // 根据环境自动选择日志级别
+  switch (env) {
+    case 'production':
+      return 'info';
+    case 'test':
+      return 'warn';
+    case 'development':
+    default:
+      return 'debug';
+  }
+}
+
+/**
+ * 确保日志目录存在
+ */
+function ensureLogDirectory() {
+  const logDir = path.join(process.cwd(), 'logs');
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+  return logDir;
+}
+
+/**
+ * 获取当前日期的日志文件名
+ */
+function getLogFileName(type: 'app' | 'error' = 'app'): string {
+  const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  return `${type}-${date}.log`;
+}
+
+/**
+ * 自定义时间格式化函数 - 中文易读格式
+ */
+function customTimeFormat() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+  
+  return `,"time":"${year}年${month}月${day}日 ${hours}:${minutes}:${seconds}.${milliseconds}"`;
+}
+
+/**
+ * 获取中文格式的时间戳字符串
+ */
+export function getChineseTimestamp(date?: Date): string {
+  const now = date || new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
+  
+  return `${year}年${month}月${day}日 ${hours}:${minutes}:${seconds}.${milliseconds}`;
+}
+
+/**
+ * 创建 logger 实例
+ */
+function createLogger() {
+  const level = getLogLevel();
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const logDir = ensureLogDirectory();
+
+  // 基础配置
+  const baseConfig = {
+    level,
+    timestamp: customTimeFormat,
+    formatters: {
+      level: (label: string, number: number) => {
+        return { 
+          level: number,
+          levelLabel: LOG_LEVEL_LABELS[number] || '未知'
+        };
+      },
+      // 移除 pid 和 hostname
+      bindings: () => ({}),
+    },
+  };
+
+  if (isDevelopment) {
+    // 开发环境：同时输出到控制台（格式化）和文件（JSON）
+    return pino(baseConfig, pino.multistream([
+      // 控制台输出 - 格式化显示
+      {
+        level,
+        stream: pino.transport({
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+            translateTime: 'yyyy-mm-dd HH:MM:ss',
+            ignore: 'pid,hostname',
+          },
+        }),
+      },
+      // 文件输出 - JSON格式
+      {
+        level,
+        stream: pino.destination({
+          dest: path.join(logDir, getLogFileName('app')),
+          sync: false, // 异步写入以提高性能
+        }),
+      },
+      // 错误日志单独文件
+      {
+        level: 'error',
+        stream: pino.destination({
+          dest: path.join(logDir, getLogFileName('error')),
+          sync: false,
+        }),
+      },
+    ]));
+  } else {
+    // 生产环境：只输出到文件
+    return pino(baseConfig, pino.multistream([
+      // 应用日志文件
+      {
+        level,
+        stream: pino.destination({
+          dest: path.join(logDir, getLogFileName('app')),
+          sync: false,
+        }),
+      },
+      // 错误日志单独文件
+      {
+        level: 'error',
+        stream: pino.destination({
+          dest: path.join(logDir, getLogFileName('error')),
+          sync: false,
+        }),
+      },
+    ]));
+  }
+}
+
+/**
+ * 全局 logger 实例
+ */
+export const logger = createLogger();
+
+/**
+ * 为特定模块创建子 logger
+ */
+export function createModuleLogger(module: string) {
+  return logger.child({ module });
+}
+
+/**
+ * 创建带有请求上下文的 logger
+ */
+export function createRequestLogger(requestId: string, userId?: string) {
+  return logger.child({
+    requestId,
+    ...(userId && { userId }),
+  });
+}
+
+/**
+ * 记录 API 请求日志的中间件工具函数
+ */
+export function logApiRequest(
+  method: string,
+  url: string,
+  statusCode?: number,
+  duration?: number,
+  error?: Error
+) {
+  const logData = {
+    method,
+    url,
+    statusCode,
+    duration,
+    ...(error && {
+      error: {
+        message: error.message,
+        stack: error.stack,
+      },
+    }),
+  };
+
+  if (error || (statusCode && statusCode >= 400)) {
+    logger.error(logData, `API ${method} ${url} failed`);
+  } else {
+    logger.info(logData, `API ${method} ${url} completed`);
+  }
+}
+
+/**
+ * 记录数据库操作日志
+ */
+export function logDatabaseOperation(
+  operation: string,
+  table?: string,
+  duration?: number,
+  error?: Error
+) {
+  const logData = {
+    operation,
+    table,
+    duration,
+    ...(error && {
+      error: {
+        message: error.message,
+        stack: error.stack,
+      },
+    }),
+  };
+
+  if (error) {
+    logger.error(logData, `Database ${operation} failed`);
+  } else {
+    logger.debug(logData, `Database ${operation} completed`);
+  }
+}
+
+/**
+ * 业务逻辑日志记录器
+ */
+export const businessLogger = {
+  /**
+   * 记录客户相关操作
+   */
+  customer: (action: string, customerId?: string, data?: any) => {
+    logger.info(
+      {
+        business: 'customer',
+        action,
+        customerId,
+        data,
+      },
+      `Customer ${action}`
+    );
+  },
+
+  /**
+   * 记录预约相关操作
+   */
+  appointment: (action: string, appointmentId?: string, data?: any) => {
+    logger.info(
+      {
+        business: 'appointment',
+        action,
+        appointmentId,
+        data,
+      },
+      `Appointment ${action}`
+    );
+  },
+
+  /**
+   * 记录带看相关操作
+   */
+  viewing: (action: string, viewingId?: string, data?: any) => {
+    logger.info(
+      {
+        business: 'viewing',
+        action,
+        viewingId,
+        data,
+      },
+      `Viewing ${action}`
+    );
+  },
+
+  /**
+   * 记录数据同步操作
+   */
+  sync: (action: string, data?: any) => {
+    // 如果data中包含timestamp，转换为中文格式
+    let processedData = data;
+    if (data && data.timestamp) {
+      processedData = {
+        ...data,
+        timestamp: getChineseTimestamp(new Date(data.timestamp))
+      };
+    } else if (action === 'started') {
+      // 为started操作自动添加中文时间戳
+      processedData = {
+        ...data,
+        timestamp: getChineseTimestamp()
+      };
+    }
+    
+    logger.info(
+      {
+        business: 'sync',
+        action,
+        data: processedData,
+      },
+      `Data sync ${action}`
+    );
+  },
+};
+
+/**
+ * 日志管理工具函数
+ */
+export const logUtils = {
+  /**
+   * 获取日志目录路径
+   */
+  getLogDirectory(): string {
+    return path.join(process.cwd(), 'logs');
+  },
+
+  /**
+   * 获取所有日志文件列表
+   */
+  getLogFiles(): string[] {
+    const logDir = this.getLogDirectory();
+    if (!fs.existsSync(logDir)) {
+      return [];
+    }
+    return fs.readdirSync(logDir)
+      .filter(file => file.endsWith('.log'))
+      .sort((a, b) => b.localeCompare(a)); // 按日期倒序
+  },
+
+  /**
+   * 读取指定日志文件的内容
+   */
+  readLogFile(filename: string): string {
+    const logDir = this.getLogDirectory();
+    const filePath = path.join(logDir, filename);
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`日志文件不存在: ${filename}`);
+    }
+    return fs.readFileSync(filePath, 'utf-8');
+  },
+
+  /**
+   * 获取最近N行日志
+   */
+  getTailLogs(filename: string, lines: number = 100): string[] {
+    const content = this.readLogFile(filename);
+    const allLines = content.split('\n').filter(line => line.trim());
+    return allLines.slice(-lines);
+  },
+
+  /**
+   * 清理旧的日志文件（保留最近N天）
+   */
+  cleanOldLogs(retainDays: number = 7): string[] {
+    const logDir = this.getLogDirectory();
+    const files = this.getLogFiles();
+    const now = new Date();
+    const deletedFiles: string[] = [];
+
+    files.forEach(file => {
+      const dateMatch = file.match(/(\d{4}-\d{2}-\d{2})/);
+      if (dateMatch) {
+        const fileDate = new Date(dateMatch[1]);
+        const daysDiff = Math.floor((now.getTime() - fileDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysDiff > retainDays) {
+          const filePath = path.join(logDir, file);
+          fs.unlinkSync(filePath);
+          deletedFiles.push(file);
+        }
+      }
+    });
+
+    return deletedFiles;
+  },
+
+  /**
+   * 获取日志文件统计信息
+   */
+  getLogStats(): { 
+    totalFiles: number; 
+    totalSize: string; 
+    oldestFile: string | null; 
+    newestFile: string | null; 
+  } {
+    const logDir = this.getLogDirectory();
+    const files = this.getLogFiles();
+    
+    let totalSize = 0;
+    files.forEach(file => {
+      const filePath = path.join(logDir, file);
+      const stats = fs.statSync(filePath);
+      totalSize += stats.size;
+    });
+
+    const formatSize = (bytes: number): string => {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+
+    return {
+      totalFiles: files.length,
+      totalSize: formatSize(totalSize),
+      oldestFile: files.length > 0 ? files[files.length - 1] : null,
+      newestFile: files.length > 0 ? files[0] : null,
+    };
+  },
+};
+
+export default logger; 

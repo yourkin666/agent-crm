@@ -2,6 +2,7 @@ import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import fs from 'fs';
 import path from 'path';
+import { createModuleLogger, logDatabaseOperation } from '../logger';
 
 // 数据库文件路径
 const DB_PATH = path.join(process.cwd(), 'data', 'crm.db');
@@ -15,6 +16,9 @@ if (!fs.existsSync(DATA_DIR)) {
 // 全局数据库连接和初始化状态
 let db: Database | null = null;
 let isInitialized: boolean = false;
+
+// 数据库模块日志记录器
+const dbLogger = createModuleLogger('database');
 
 export async function getDatabase(): Promise<Database> {
   if (!db) {
@@ -51,7 +55,7 @@ async function initializeDatabase() {
   // 执行 SQL 语句创建表
   await db.exec(schema);
   
-  console.log('数据库初始化完成');
+  dbLogger.info('数据库初始化完成');
 }
 
 // 关闭数据库连接
@@ -80,38 +84,51 @@ export class DatabaseManager {
 
   // 执行查询并返回所有结果
   async query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+    const startTime = Date.now();
     try {
       const db = await this.ensureDb();
-      return await db.all(sql, params) as T[];
+      const result = await db.all(sql, params) as T[];
+      const duration = Date.now() - startTime;
+      logDatabaseOperation('query', undefined, duration);
+      return result;
     } catch (error) {
-      console.error('Database query error:', error);
+      const duration = Date.now() - startTime;
+      logDatabaseOperation('query', undefined, duration, error as Error);
       throw error;
     }
   }
 
   // 执行查询并返回第一个结果
   async queryOne<T = any>(sql: string, params: any[] = []): Promise<T | null> {
+    const startTime = Date.now();
     try {
       const db = await this.ensureDb();
       const result = await db.get(sql, params) as T | undefined;
+      const duration = Date.now() - startTime;
+      logDatabaseOperation('queryOne', undefined, duration);
       return result || null;
     } catch (error) {
-      console.error('Database queryOne error:', error);
+      const duration = Date.now() - startTime;
+      logDatabaseOperation('queryOne', undefined, duration, error as Error);
       throw error;
     }
   }
 
   // 执行插入/更新/删除操作
   async execute(sql: string, params: any[] = []): Promise<{ changes: number; lastInsertRowid: number }> {
+    const startTime = Date.now();
     try {
       const db = await this.ensureDb();
       const result = await db.run(sql, params);
+      const duration = Date.now() - startTime;
+      logDatabaseOperation('execute', undefined, duration);
       return {
         changes: result.changes || 0,
         lastInsertRowid: result.lastID || 0
       };
     } catch (error) {
-      console.error('Database execute error:', error);
+      const duration = Date.now() - startTime;
+      logDatabaseOperation('execute', undefined, duration, error as Error);
       throw error;
     }
   }
@@ -136,7 +153,7 @@ export class DatabaseManager {
     countQuery: string,
     params: any[] = [],
     page: number = 1,
-    pageSize: number = 20
+    pageSize: number = 6
   ): Promise<{ data: T[]; total: number; page: number; pageSize: number; totalPages: number }> {
     const offset = (page - 1) * pageSize;
     
@@ -162,9 +179,10 @@ export class DatabaseManager {
     try {
       const db = await this.ensureDb();
       await db.get('SELECT 1');
+      dbLogger.debug('数据库健康检查通过');
       return true;
     } catch (error) {
-      console.error('Database health check failed:', error);
+      dbLogger.error({ error: error instanceof Error ? error.message : error }, '数据库健康检查失败');
       return false;
     }
   }

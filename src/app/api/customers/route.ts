@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbManager } from '../../../lib/database';
 import { Customer, CustomerFilterParams, ApiResponse, PaginatedResponse, SourceChannel, BusinessType } from '../../../types';
 import { parseRoomTags } from '../../../utils/helpers';
+import { DEFAULT_PAGE_SIZE } from '../../../utils/constants';
 import { 
   withErrorHandler, 
   createSuccessResponse, 
@@ -19,7 +20,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   // 解析查询参数
   const filters: CustomerFilterParams = {
     page: parseInt(searchParams.get('page') || '1'),
-    pageSize: parseInt(searchParams.get('pageSize') || '20'),
+    pageSize: parseInt(searchParams.get('pageSize') || DEFAULT_PAGE_SIZE.toString()),
     name: searchParams.get('name') || undefined,
     phone: searchParams.get('phone') || undefined,
     status: searchParams.get('status') ? parseInt(searchParams.get('status')!) : undefined,
