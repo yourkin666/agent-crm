@@ -69,7 +69,7 @@ async function setupDatabase() {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    const stmt = db.prepare(`
+    const stmt = await db.prepare(`
       INSERT INTO viewing_records (
         customer_id, viewing_time, property_name, property_address,
         room_type, room_tag, viewer_name, viewing_status, viewing_feedback, commission, notes, business_type
@@ -77,11 +77,11 @@ async function setupDatabase() {
     `);
 
     for (let i = 1; i <= 20; i++) {
-      const customerId = Math.ceil(Math.random() * 30);
+      const customerId = Math.ceil(Math.random() * 5); // 只有5个客户
       const viewingDate = new Date(2024, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1);
       const viewerTypes = ['internal', 'external', 'external_sales', 'creator'];
-      
-      stmt.run([
+
+      await stmt.run(
         customerId,
         viewingDate.toISOString(),
         `测试楼盘${i}`,
@@ -94,8 +94,10 @@ async function setupDatabase() {
         Math.floor(Math.random() * 5000) + 1000,
         `测试备注${i}`,
         ['whole_rent', 'centralized', 'shared_rent'][Math.floor(Math.random() * 3)]
-      ]);
+      );
     }
+
+    await stmt.finalize();
 
     // 插入示例预约带看数据
     const insertAppointmentSQL = `

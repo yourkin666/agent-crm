@@ -450,7 +450,11 @@ export default function CustomersPage() {
                         setDetailModalVisible(false);
                         setCurrentCustomer(null);
                     }}
-                    onEdit={handleEditCustomer}
+                    onEdit={() => {
+                        if (currentCustomer) {
+                            handleEditCustomer(currentCustomer);
+                        }
+                    }}
                 />
 
                 {/* 添加带看记录模态框 */}

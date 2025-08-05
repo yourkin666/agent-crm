@@ -42,6 +42,11 @@ export async function POST(request: NextRequest) {
           ]);
 
           const customerId = customerResult.lastID;
+          if (!customerId) {
+            syncResults.errors.push(`预约${appointment.id}同步失败: 创建客户失败`);
+            continue;
+          }
+          
           syncResults.createdCustomers++;
 
           // 检查是否已有对应的带看记录

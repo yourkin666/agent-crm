@@ -418,7 +418,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       const duration = Date.now() - startTime;
 
       // 记录业务操作成功
-      if (create_viewing_record) {
+      if (create_viewing_record && appointmentResult.lastID) {
         businessLogger.appointment('created_with_viewing', appointmentResult.lastID.toString(), {
           requestId,
           property_name,
@@ -430,7 +430,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           commission,
           duration
         });
-      } else {
+      } else if (appointmentResult.lastID) {
         businessLogger.appointment('created', appointmentResult.lastID.toString(), {
           requestId,
           property_name,

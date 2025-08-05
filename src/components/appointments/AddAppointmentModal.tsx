@@ -187,10 +187,10 @@ export default function AddAppointmentModal({ visible, onCancel, onSuccess }: Ad
         </Row>
 
         <Divider orientation="left">带看记录同步</Divider>
-        
+
         <Row>
           <Col span={24}>
-            <Checkbox 
+            <Checkbox
               checked={createViewingRecord}
               onChange={(e) => setCreateViewingRecord(e.target.checked)}
             >
@@ -226,7 +226,7 @@ export default function AddAppointmentModal({ visible, onCancel, onSuccess }: Ad
                     min={0}
                     precision={2}
                     formatter={(value) => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                    parser={(value) => value!.replace(/¥\s?|(,*)/g, '')}
+                    parser={(value) => (parseFloat(value!.replace(/¥\s?|(,*)/g, '')) || 0) as any}
                   />
                 </Form.Item>
               </Col>
@@ -237,7 +237,7 @@ export default function AddAppointmentModal({ visible, onCancel, onSuccess }: Ad
                   name="notes"
                   label="备注"
                 >
-                  <Input.TextArea 
+                  <Input.TextArea
                     placeholder="请输入带看备注"
                     rows={3}
                   />

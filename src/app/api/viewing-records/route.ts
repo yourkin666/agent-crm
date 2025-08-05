@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../lib/database';
-import { 
-  withErrorHandler, 
-  createSuccessResponse, 
-  createNotFoundError, 
-  createDatabaseError 
+import {
+  withErrorHandler,
+  createSuccessResponse,
+  createNotFoundError,
+  createDatabaseError
 } from '../../../lib/api-error-handler';
 import { validateViewingRecordData } from '../../../lib/validation';
 import { logApiRequest, businessLogger, createRequestLogger } from '../../../lib/logger';
@@ -44,10 +44,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     },
     requestId
   }, '带看记录创建请求数据解析完成');
-  
+
   // 验证输入数据
   validateViewingRecordData(body);
-  
+
   const {
     customer_id,
     viewing_time,
@@ -111,11 +111,11 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       property_name || '未填写楼盘',                // 默认楼盘名
       property_address || null,
       room_type || 'one_bedroom',                  // 默认房型
-      room_tag || null, 
+      room_tag || null,
       viewer_name || 'internal',                   // 默认带看人类型
-      viewing_status, 
-      commission, 
-      viewing_feedback || null, 
+      viewing_status,
+      commission,
+      viewing_feedback || null,
       business_type || 'whole_rent',               // 默认业务类型
       notes || null
     ]);
@@ -146,44 +146,46 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     const duration = Date.now() - startTime;
 
     // 记录业务操作成功
-    businessLogger.viewing('created', result.lastID.toString(), {
-      requestId,
-      customer_id,
-      customerName: customerInfo?.name,
-      property_name: property_name || '未填写楼盘',
-      property_address,
-      viewer_name: viewer_name || 'internal',
-      viewing_status,
-      commission,
-      business_type: business_type || 'whole_rent',
-      duration
-    });
+    if (result.lastID) {
+      businessLogger.viewing('created', result.lastID.toString(), {
+        requestId,
+        customer_id,
+        customerName: customerInfo?.name,
+        property_name: property_name || '未填写楼盘',
+        property_address,
+        viewer_name: viewer_name || 'internal',
+        viewing_status,
+        commission,
+        business_type: business_type || 'whole_rent',
+        duration
+      });
 
-    // 记录API请求完成
-    logApiRequest('POST', '/api/viewing-records', 201, duration);
-    
-    requestLogger.info({
-      statusCode: 201,
-      duration,
-      viewingRecordId: result.lastID,
-      customer_id,
-      customerName: customerInfo?.name,
-      property_name: property_name || '未填写楼盘',
-      commission,
-      requestId
-    }, 'API请求成功完成 - 带看记录创建成功');
+      // 记录API请求完成
+      logApiRequest('POST', '/api/viewing-records', 201, duration);
 
-    return createSuccessResponse(
-      { id: result.lastID },
-      '带看记录添加成功',
-      201
-    );
+      requestLogger.info({
+        statusCode: 201,
+        duration,
+        viewingRecordId: result.lastID,
+        customer_id,
+        customerName: customerInfo?.name,
+        property_name: property_name || '未填写楼盘',
+        commission,
+        requestId
+      }, 'API请求成功完成 - 带看记录创建成功');
+
+      return createSuccessResponse(
+        { id: result.lastID },
+        '带看记录添加成功',
+        201
+      );
+    }
   } catch (error) {
     const duration = Date.now() - startTime;
-    
+
     // 记录API请求失败
     logApiRequest('POST', '/api/viewing-records', 500, duration, error as Error);
-    
+
     requestLogger.error({
       error: error instanceof Error ? error.message : error,
       duration,
