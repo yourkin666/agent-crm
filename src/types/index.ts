@@ -97,12 +97,14 @@ export interface Customer {
   wechat?: string;                 // 微信
   status: CustomerStatus;          // 状态
   community: string;               // 咨询小区
-  business_type: BusinessType;     // 业务类型
-  room_type: RoomType;             // 居室
+  business_type: BusinessType[];   // 业务类型（多选）
+  room_type: RoomType[];           // 居室（多选）
   room_tags?: RoomTag[];           // 房型标签
   move_in_date?: string;           // 入住时间（具体日期）
   lease_period?: LeasePeriod;      // 租赁周期
-  price_range?: string;            // 可接受的价格
+  price_range?: string;            // 可接受的价格（兼容性保留）
+  price_min?: number;              // 最低价格
+  price_max?: number;              // 最高价格
   source_channel: SourceChannel;   // 来源渠道
   creator: string;                 // 录入人
   is_agent: boolean;               // 是否为人工录入

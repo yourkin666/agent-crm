@@ -12,6 +12,7 @@ import {
   ROOM_TYPE_TEXT, ROOM_TAG_TEXT, LEASE_PERIOD_TEXT
 } from '@/utils/constants';
 import dayjs from 'dayjs';
+import PriceRangeInput from './PriceRangeInput';
 
 const { Option } = Select;
 
@@ -29,10 +30,20 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
   // 当模态框打开且有客户数据时，设置表单初始值
   useEffect(() => {
     if (visible && customer) {
-      form.setFieldsValue({
+      // 处理数据格式，确保数组字段正确
+      const formData = {
         ...customer,
         move_in_date: customer.move_in_date ? dayjs(customer.move_in_date) : null,
-      });
+        // 确保业务类型和户型需求是数组格式
+        business_type: Array.isArray(customer.business_type) ? customer.business_type : 
+                      (customer.business_type ? [customer.business_type] : []),
+        room_type: Array.isArray(customer.room_type) ? customer.room_type : 
+                  (customer.room_type ? [customer.room_type] : []),
+        room_tags: Array.isArray(customer.room_tags) ? customer.room_tags : 
+                  (customer.room_tags ? [customer.room_tags] : []),
+      };
+      
+      form.setFieldsValue(formData);
     }
   }, [visible, customer, form]);
 
@@ -41,16 +52,23 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
 
     setLoading(true);
     try {
+      // 处理提交数据格式
+      const submitData = {
+        ...values,
+        id: customer.id,
+        move_in_date: values.move_in_date ? values.move_in_date.format('YYYY-MM-DD') : null,
+        // 确保数组字段是正确的格式
+        business_type: values.business_type || [],
+        room_type: values.room_type || [],
+        room_tags: values.room_tags || [],
+      };
+
       const response = await fetch('/api/customers', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...values,
-          id: customer.id,
-          move_in_date: values.move_in_date ? values.move_in_date.format('YYYY-MM-DD') : null,
-        }),
+        body: JSON.stringify(submitData),
       });
 
       const result = await response.json();
@@ -163,10 +181,13 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
             <Col span={12}>
               <Form.Item
                 name="business_type"
-                label="需求户型（业务类型）"
-
+                label="业务类型（多选）"
               >
-                <Select placeholder="请选择业务类型">
+                <Select 
+                  mode="multiple"
+                  placeholder="请选择业务类型"
+                  allowClear
+                >
                   {Object.entries(BUSINESS_TYPE_TEXT).map(([value, label]) => (
                     <Option key={value} value={value}>
                       {label}
@@ -176,8 +197,42 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
               </Form.Item>
             </Col>
             <Col span={12}>
+              <Form.Item
+                name="room_type"
+                label="户型需求（多选）"
+              >
+                <Select 
+                  mode="multiple"
+                  placeholder="请选择户型需求"
+                  allowClear
+                >
+                  {Object.entries(ROOM_TYPE_TEXT).map(([value, label]) => (
+                    <Option key={value} value={value}>
+                      {label}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="room_tags"
+                label="房型标签（多选）"
+              >
+                <Select
+                  mode="multiple"
+                  placeholder="选择房型标签"
+                  allowClear
+                >
+                  {Object.entries(ROOM_TAG_TEXT).map(([key, value]) => (
+                    <Option key={key} value={key}>{value}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
               <Form.Item name="price_range" label="可接受价格">
-                <Input placeholder="例如：5000-7000" />
+                <PriceRangeInput />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -204,7 +259,6 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
               <Form.Item
                 name="source_channel"
                 label="来源渠道"
-
               >
                 <Select placeholder="请选择来源渠道">
                   {Object.entries(SOURCE_CHANNEL_TEXT).map(([value, label]) => (
@@ -237,20 +291,6 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
               </Form.Item>
             </Col>
           </Row>
-        </div>
-
-        {/* 房型配置（移到找房需求中） */}
-        <div style={{ display: 'none' }}>
-          <Form.Item
-            name="room_type"
-            
-            initialValue="one_bedroom"
-          >
-            <Input type="hidden" />
-          </Form.Item>
-          <Form.Item name="room_tags">
-            <Input type="hidden" />
-          </Form.Item>
         </div>
       </Form>
     </Modal>

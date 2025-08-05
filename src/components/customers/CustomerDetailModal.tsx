@@ -15,13 +15,16 @@ import {
   VIEWER_TYPE_TEXT_BY_STRING, VIEWING_STATUS_TEXT, VIEWING_STATUS_COLOR,
   VIEWING_FEEDBACK_TEXT, VIEWING_FEEDBACK_COLOR
 } from '@/utils/constants';
-import { formatPhone, formatDate, formatMoney, formatRequirementByString } from '@/utils/helpers';
+import { 
+  formatPhone, formatDate, formatMoney,
+  formatBusinessTypes, formatRoomTypesDisplay, formatRoomTags, formatPriceRange
+} from '@/utils/helpers';
 
 interface CustomerDetailModalProps {
   visible: boolean;
   customer: Customer | null;
   onCancel: () => void;
-  onEdit?: (customer: Customer) => void;
+  onEdit: () => void;
 }
 
 export default function CustomerDetailModal({ visible, customer, onCancel, onEdit }: CustomerDetailModalProps) {
@@ -34,7 +37,7 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
     try {
       const response = await fetch(`/api/customers/${customerId}/viewing-records`);
       const result = await response.json();
-
+      
       if (result.success) {
         setViewingRecords(result.data || []);
       } else {
@@ -146,7 +149,7 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
                 <div className="info-item">
                   <div className="info-label">客户状态</div>
                   <div className="info-value">
-                    <Tag color={CUSTOMER_STATUS_COLOR[customer.status]} size="small">
+                    <Tag color={CUSTOMER_STATUS_COLOR[customer.status]}>
                       {CUSTOMER_STATUS_TEXT[customer.status]}
                     </Tag>
                   </div>
@@ -187,14 +190,19 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
                 <div className="info-item">
                   <div className="info-label">需求户型</div>
                   <div className="info-value">
-                    {formatRequirementByString(customer.business_type, customer.room_type, customer.room_tags)}
+                    {formatBusinessTypes(customer.business_type)} - {formatRoomTypesDisplay(customer.room_type)}
+                    {customer.room_tags && customer.room_tags.length > 0 && 
+                      ` - ${formatRoomTags(customer.room_tags)}`
+                    }
                   </div>
                 </div>
               </Col>
               <Col span={12}>
                 <div className="info-item">
                   <div className="info-label">可接受价格</div>
-                  <div className="info-value">{customer.price_range || '--'}</div>
+                  <div className="info-value">
+                    {customer.price_range || '--'}
+                  </div>
                 </div>
               </Col>
               <Col span={12}>
@@ -273,7 +281,7 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
         <Button 
           type="link" 
           icon={<EditOutlined />}
-          onClick={() => onEdit(customer)}
+          onClick={() => onEdit()}
           className="text-blue-600 hover:text-blue-700"
         >
           编辑信息

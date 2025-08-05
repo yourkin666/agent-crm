@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dbManager } from '../../../lib/database';
 import { Customer, CustomerFilterParams, ApiResponse, PaginatedResponse, SourceChannel, BusinessType } from '../../../types';
-import { parseRoomTags } from '../../../utils/helpers';
+import { parseRoomTags, parseBusinessTypes, parseRoomTypes } from '../../../utils/helpers';
 import { DEFAULT_PAGE_SIZE } from '../../../utils/constants';
 import { 
   withErrorHandler, 
@@ -151,6 +151,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     // 处理客户数据
     const customers: Customer[] = result.data.map((row: any) => ({
       ...row,
+      business_type: parseBusinessTypes(row.business_type),
+      room_type: parseRoomTypes(row.room_type),
       room_tags: parseRoomTags(row.room_tags),
       is_agent: Boolean(row.is_agent),
     }));
@@ -265,12 +267,18 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     body.wechat || null,
     body.status || 1,                        // 默认为跟进中
     body.community || '未填写',               // 默认小区
-    body.business_type || 'whole_rent',       // 默认业务类型：整租
-    body.room_type || 'one_bedroom',          // 默认房型：一居室
+    // 处理业务类型数组
+    body.business_type && Array.isArray(body.business_type) && body.business_type.length > 0 
+      ? JSON.stringify(body.business_type) 
+      : JSON.stringify(['whole_rent']),      // 默认业务类型：整租
+    // 处理户型需求数组
+    body.room_type && Array.isArray(body.room_type) && body.room_type.length > 0 
+      ? JSON.stringify(body.room_type) 
+      : JSON.stringify(['one_bedroom']),     // 默认房型：一居室
     body.room_tags ? JSON.stringify(body.room_tags) : null,
     body.move_in_date || null,
     body.lease_period || null,
-    body.price_range || null,
+    body.price_range || null,               // 价格范围
     body.source_channel || 'referral',       // 默认来源：转介绍
     body.creator || '系统',                   // 默认录入人
     body.is_agent !== undefined ? body.is_agent : true,
@@ -296,6 +304,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
       const customer: Customer = {
         ...newCustomer,
+        business_type: parseBusinessTypes(newCustomer.business_type),
+        room_type: parseRoomTypes(newCustomer.room_type),
         room_tags: parseRoomTags(newCustomer.room_tags),
         is_agent: Boolean(newCustomer.is_agent),
       };
@@ -433,12 +443,18 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
     body.wechat || null,
     body.status || 1,
     body.community || '未填写',               // 默认小区
-    body.business_type || 'whole_rent',       // 默认业务类型
-    body.room_type || 'one_bedroom',          // 默认房型
+    // 处理业务类型数组
+    body.business_type && Array.isArray(body.business_type) && body.business_type.length > 0 
+      ? JSON.stringify(body.business_type) 
+      : JSON.stringify(['whole_rent']),      // 默认业务类型
+    // 处理户型需求数组
+    body.room_type && Array.isArray(body.room_type) && body.room_type.length > 0 
+      ? JSON.stringify(body.room_type) 
+      : JSON.stringify(['one_bedroom']),     // 默认房型
     body.room_tags ? JSON.stringify(body.room_tags) : null,
     body.move_in_date || null,
     body.lease_period || null,
-    body.price_range || null,
+    body.price_range || null,               // 价格范围
     body.source_channel || 'referral',       // 默认来源
     body.is_agent !== undefined ? body.is_agent : true,
     body.id,
@@ -465,6 +481,8 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
 
       const customer: Customer = {
         ...updatedCustomer,
+        business_type: parseBusinessTypes(updatedCustomer.business_type),
+        room_type: parseRoomTypes(updatedCustomer.room_type),
         room_tags: parseRoomTags(updatedCustomer.room_tags),
         is_agent: Boolean(updatedCustomer.is_agent),
       };

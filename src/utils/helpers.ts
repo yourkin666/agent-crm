@@ -267,4 +267,76 @@ export function isEmpty(value: any): boolean {
   if (Array.isArray(value)) return value.length === 0;
   if (typeof value === 'object') return Object.keys(value).length === 0;
   return false;
+}
+
+/**
+ * 解析业务类型 JSON 字符串
+ * @param typesJson 业务类型 JSON 字符串
+ * @returns 业务类型数组
+ */
+export function parseBusinessTypes(typesJson: string | null): BusinessType[] {
+  if (!typesJson) return [];
+  try {
+    const parsed = JSON.parse(typesJson);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    // 如果解析失败，可能是单个字符串值
+    return typesJson ? [typesJson as BusinessType] : [];
+  }
+}
+
+/**
+ * 解析户型需求 JSON 字符串
+ * @param typesJson 户型需求 JSON 字符串
+ * @returns 户型需求数组
+ */
+export function parseRoomTypes(typesJson: string | null): RoomType[] {
+  if (!typesJson) return [];
+  try {
+    const parsed = JSON.parse(typesJson);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch {
+    // 如果解析失败，可能是单个字符串值
+    return typesJson ? [typesJson as RoomType] : [];
+  }
+}
+
+/**
+ * 格式化业务类型显示
+ * @param types 业务类型数组
+ * @returns 格式化后的业务类型文本
+ */
+export function formatBusinessTypes(types: BusinessType[]): string {
+  if (!types || types.length === 0) return '';
+  return types.map(type => BUSINESS_TYPE_TEXT[type]).join(', ');
+}
+
+/**
+ * 格式化户型需求显示
+ * @param types 户型需求数组
+ * @returns 格式化后的户型需求文本
+ */
+export function formatRoomTypesDisplay(types: RoomType[]): string {
+  if (!types || types.length === 0) return '';
+  return types.map(type => ROOM_TYPE_TEXT[type]).join(', ');
+}
+
+/**
+ * 格式化价格范围显示
+ * @param minPrice 最低价格
+ * @param maxPrice 最高价格
+ * @returns 格式化后的价格范围文本
+ */
+export function formatPriceRange(minPrice?: number, maxPrice?: number): string {
+  if (!minPrice && !maxPrice) return '';
+  if (minPrice && maxPrice) {
+    return `${minPrice.toLocaleString()}-${maxPrice.toLocaleString()}元`;
+  }
+  if (minPrice) {
+    return `${minPrice.toLocaleString()}元起`;
+  }
+  if (maxPrice) {
+    return `${maxPrice.toLocaleString()}元以下`;
+  }
+  return '';
 } 

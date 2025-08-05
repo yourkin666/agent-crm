@@ -20,7 +20,7 @@ import {
     CUSTOMER_STATUS_TEXT, CUSTOMER_STATUS_COLOR, SOURCE_CHANNEL_TEXT,
     BUSINESS_TYPE_TEXT, DEFAULT_PAGE_SIZE
 } from '@/utils/constants';
-import { formatPhone, formatDate, formatMoney, formatRequirement } from '@/utils/helpers';
+import { formatPhone, formatDate, formatMoney, formatRequirement, formatBusinessTypes, formatRoomTypesDisplay, formatPriceRange } from '@/utils/helpers';
 
 const { Option } = Select;
 
@@ -204,7 +204,11 @@ export default function CustomersPage() {
             title: '需求房型',
             key: 'requirement',
             width: 160,
-            render: (_, record) => formatRequirement(record.business_type, record.room_type, record.room_tags),
+            render: (_, record) => {
+                const businessTypes = formatBusinessTypes(record.business_type);
+                const roomTypes = formatRoomTypesDisplay(record.room_type);
+                return `${businessTypes} - ${roomTypes}`;
+            },
         },
         {
             title: '入住时间',
@@ -215,9 +219,9 @@ export default function CustomersPage() {
         },
         {
             title: '可接受价格',
-            dataIndex: 'price_range',
             key: 'price_range',
             width: 100,
+            render: (_, record) => record.price_range || '-',
         },
         {
             title: '线索佣金',

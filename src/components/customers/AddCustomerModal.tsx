@@ -12,6 +12,7 @@ import {
   ROOM_TYPE_TEXT, ROOM_TAG_TEXT, LEASE_PERIOD_TEXT
 } from '@/utils/constants';
 import CommunityAutoComplete from './CommunityAutoComplete';
+import PriceRangeInput from './PriceRangeInput';
 
 const { Option } = Select;
 
@@ -28,16 +29,23 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
+      // 处理数据格式
+      const submitData = {
+        ...values,
+        creator: '管理员', // 这里可以改为从用户上下文获取
+        is_agent: true,
+        // 确保数组字段是正确的格式
+        business_type: values.business_type || [],
+        room_type: values.room_type || [],
+        room_tags: values.room_tags || [],
+      };
+
       const response = await fetch('/api/customers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...values,
-          creator: '管理员', // 这里可以改为从用户上下文获取
-          is_agent: true,
-        }),
+        body: JSON.stringify(submitData),
       });
 
       const result = await response.json();
@@ -146,9 +154,13 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
           <Col span={8}>
             <Form.Item
               name="business_type"
-              label="业务类型"
+              label="业务类型（多选）"
             >
-              <Select placeholder="请选择业务类型">
+              <Select 
+                mode="multiple"
+                placeholder="请选择业务类型"
+                allowClear
+              >
                 {Object.entries(BUSINESS_TYPE_TEXT).map(([key, value]) => (
                   <Option key={key} value={key}>{value}</Option>
                 ))}
@@ -158,9 +170,13 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
           <Col span={8}>
             <Form.Item
               name="room_type"
-              label="户型需求"
+              label="户型需求（多选）"
             >
-              <Select placeholder="请选择户型">
+              <Select 
+                mode="multiple"
+                placeholder="请选择户型"
+                allowClear
+              >
                 {Object.entries(ROOM_TYPE_TEXT).map(([key, value]) => (
                   <Option key={key} value={key}>{value}</Option>
                 ))}
@@ -170,7 +186,7 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
           <Col span={8}>
             <Form.Item
               name="room_tags"
-              label="房型标签"
+              label="房型标签（多选）"
             >
               <Select
                 mode="multiple"
@@ -211,7 +227,7 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="price_range" label="可接受价格">
-              <Input placeholder="例如：5000-7000" />
+              <PriceRangeInput />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -226,6 +242,9 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
               </Select>
             </Form.Item>
           </Col>
+        </Row>
+
+        <Row gutter={16}>
           <Col span={12}>
             <Form.Item
               name="creator"
