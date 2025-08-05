@@ -1,6 +1,7 @@
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
+import { NextRequest } from 'next/server';
 
 /**
  * 日志级别配置
@@ -443,6 +444,97 @@ export const logUtils = {
       oldestFile: files.length > 0 ? files[files.length - 1] : null,
       newestFile: files.length > 0 ? files[0] : null,
     };
+  },
+};
+
+/**
+ * 统一的API日志中间件
+ * 用于简化各个接口的日志记录，提供一致的日志格式和流程
+ */
+export function withApiLogging<T extends any[], R>(
+  apiName: string,
+  handler: (request: NextRequest, requestId: string, requestLogger: any, ...args: T) => Promise<R>
+) {
+  return async (request: NextRequest, ...args: T): Promise<R> => {
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const startTime = Date.now();
+    const requestLogger = createRequestLogger(requestId);
+    const url = new URL(request.url);
+
+    // 记录请求开始
+    requestLogger.info({
+      method: request.method,
+      url: url.pathname,
+      query: Object.fromEntries(url.searchParams.entries()),
+      userAgent: request.headers.get('user-agent'),
+      requestId
+    }, `API请求开始 - ${apiName}`);
+
+    try {
+      const result = await handler(request, requestId, requestLogger, ...args);
+      
+      const duration = Date.now() - startTime;
+      
+      // 记录API请求完成
+      logApiRequest(request.method, url.pathname, 200, duration);
+      
+      requestLogger.info({
+        statusCode: 200,
+        duration,
+        requestId
+      }, `API请求成功完成 - ${apiName}`);
+
+      return result;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      
+      // 记录API请求失败
+      const statusCode = error instanceof Error && 'statusCode' in error ? (error as any).statusCode : 500;
+      logApiRequest(request.method, url.pathname, statusCode, duration, error as Error);
+      
+      requestLogger.error({
+        error: error instanceof Error ? error.message : error,
+        duration,
+        requestId
+      }, `API请求失败 - ${apiName}`);
+
+      throw error;
+    }
+  };
+}
+
+/**
+ * 简化的业务日志记录器 - 用于记录关键业务操作
+ */
+export const simpleBusinessLogger = {
+  /**
+   * 记录客户相关操作
+   */
+  customer: (action: string, requestId: string, data: any) => {
+    businessLogger.customer(action, data.customerId?.toString(), {
+      requestId,
+      ...data
+    });
+  },
+
+  /**
+   * 记录预约相关操作
+   */
+  appointment: (action: string, requestId: string, data: any) => {
+    businessLogger.appointment(action, data.appointmentId?.toString(), {
+      requestId,
+      ...data
+    });
+  },
+
+  /**
+   * 记录带看相关操作
+   */
+  viewing: (action: string, requestId: string, data: any) => {
+    businessLogger.viewing(action, data.viewingRecordId?.toString(), {
+      requestId,
+      ...data
+    });
   },
 };
 

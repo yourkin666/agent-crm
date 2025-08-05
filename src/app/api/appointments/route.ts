@@ -10,50 +10,88 @@ import {
   createDatabaseError 
 } from '../../../lib/api-error-handler';
 import { validateAppointmentData } from '../../../lib/validation';
+import { logApiRequest, businessLogger, createRequestLogger } from '../../../lib/logger';
+
+// 生成请求ID的辅助函数
+function generateRequestId(): string {
+  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
 
 // GET /api/appointments - 获取预约列表（包含预约记录和带看记录）
-export async function GET(request: NextRequest) {
+export const GET = withErrorHandler(async (request: NextRequest) => {
+  const requestId = generateRequestId();
+  const startTime = Date.now();
+  const requestLogger = createRequestLogger(requestId);
+
+  const { searchParams } = new URL(request.url);
+
+  // 记录请求开始
+  requestLogger.info({
+    method: 'GET',
+    url: '/api/appointments',
+    query: Object.fromEntries(searchParams.entries()),
+    userAgent: request.headers.get('user-agent')
+  }, 'API请求开始 - 获取预约列表');
+  
+  const page = parseInt(searchParams.get('page') || '1');
+  const pageSize = parseInt(searchParams.get('pageSize') || DEFAULT_PAGE_SIZE.toString());
+  const offset = (page - 1) * pageSize;
+
+  // 获取筛选参数
+  const customerName = searchParams.get('customer_name');
+  const customerPhone = searchParams.get('customer_phone');
+  const agentName = searchParams.get('agent_name');
+  const status = searchParams.get('status') ? parseInt(searchParams.get('status')!) : null;
+  const type = searchParams.get('type');
+
+  // 记录查询条件
+  requestLogger.debug({
+    filters: {
+      page,
+      pageSize,
+      customerName,
+      customerPhone,
+      agentName,
+      status,
+      type
+    },
+    requestId
+  }, '查询参数解析完成');
+
+  // 构建筛选条件
+  const conditions: string[] = [];
+  const params: any[] = [];
+
+  if (customerName) {
+    conditions.push('customer_name LIKE ?');
+    params.push(`%${customerName}%`);
+  }
+  if (customerPhone) {
+    conditions.push('customer_phone LIKE ?');
+    params.push(`%${customerPhone}%`);
+  }
+  if (agentName) {
+    conditions.push('agent_name LIKE ?');
+    params.push(`%${agentName}%`);
+  }
+  if (status !== null) {
+    conditions.push('status = ?');
+    params.push(status);
+  }
+  if (type) {
+    conditions.push('type = ?');
+    params.push(type);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
   try {
     const db = await getDatabase();
-    const { searchParams } = new URL(request.url);
-    
-    const page = parseInt(searchParams.get('page') || '1');
-    const pageSize = parseInt(searchParams.get('pageSize') || DEFAULT_PAGE_SIZE.toString());
-    const offset = (page - 1) * pageSize;
 
-    // 获取筛选参数
-    const customerName = searchParams.get('customer_name');
-    const customerPhone = searchParams.get('customer_phone');
-    const agentName = searchParams.get('agent_name');
-    const status = searchParams.get('status') ? parseInt(searchParams.get('status')!) : null;
-    const type = searchParams.get('type');
-
-    // 构建筛选条件
-    const conditions: string[] = [];
-    const params: any[] = [];
-
-    if (customerName) {
-      conditions.push('customer_name LIKE ?');
-      params.push(`%${customerName}%`);
-    }
-    if (customerPhone) {
-      conditions.push('customer_phone LIKE ?');
-      params.push(`%${customerPhone}%`);
-    }
-    if (agentName) {
-      conditions.push('agent_name LIKE ?');
-      params.push(`%${agentName}%`);
-    }
-    if (status !== null) {
-      conditions.push('status = ?');
-      params.push(status);
-    }
-    if (type) {
-      conditions.push('type = ?');
-      params.push(type);
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    requestLogger.debug({
+      conditionsCount: conditions.length,
+      requestId
+    }, '开始执行数据库查询');
 
     // 合并预约表和带看记录表的数据，统一显示
     const combinedQuery = `
@@ -152,6 +190,34 @@ export async function GET(request: NextRequest) {
     const totalResult = await db.get(countQuery, params);
     const total = totalResult?.total || 0;
 
+    const duration = Date.now() - startTime;
+
+    // 记录业务操作成功
+    businessLogger.appointment('list_queried', undefined, {
+      requestId,
+      filters: {
+        customerName,
+        customerPhone,
+        agentName,
+        status,
+        type
+      },
+      resultCount: appointments.length,
+      totalRecords: total,
+      duration
+    });
+
+    // 记录API请求完成
+    logApiRequest('GET', '/api/appointments', 200, duration);
+    
+    requestLogger.info({
+      statusCode: 200,
+      duration,
+      resultCount: appointments.length,
+      totalRecords: total,
+      requestId
+    }, 'API请求成功完成 - 预约列表查询');
+
     return NextResponse.json({
       success: true,
       data: {
@@ -164,17 +230,48 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('获取预约/带看列表失败:', error);
-    return NextResponse.json(
-      { success: false, error: '服务器内部错误' },
-      { status: 500 }
-    );
+    const duration = Date.now() - startTime;
+    
+    // 记录API请求失败
+    logApiRequest('GET', '/api/appointments', 500, duration, error as Error);
+    
+    requestLogger.error({
+      error: error instanceof Error ? error.message : error,
+      duration,
+      requestId
+    }, 'API请求失败 - 预约列表查询');
+
+    throw createDatabaseError('获取预约列表', error as Error);
   }
-}
+});
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
-  const db = await getDatabase();
+  const requestId = generateRequestId();
+  const startTime = Date.now();
+  const requestLogger = createRequestLogger(requestId);
+
+  // 记录请求开始
+  requestLogger.info({
+    method: 'POST',
+    url: '/api/appointments',
+    userAgent: request.headers.get('user-agent'),
+    requestId
+  }, 'API请求开始 - 创建新预约');
+
   const body = await request.json();
+
+  // 记录请求数据（敏感信息脱敏）
+  requestLogger.debug({
+    appointmentData: {
+      property_name: body.property_name,
+      hasCustomerPhone: !!body.customer_phone,
+      customer_name: body.customer_name,
+      agent_name: body.agent_name,
+      type: body.type,
+      create_viewing_record: body.create_viewing_record
+    },
+    requestId
+  }, '预约创建请求数据解析完成');
   
   // 验证输入数据
   validateAppointmentData(body);
@@ -194,6 +291,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     commission = 0,
     notes = ''
   } = body;
+
+  try {
+    const db = await getDatabase();
+
+    requestLogger.debug({
+      willCreateViewing: create_viewing_record,
+      requestId
+    }, '开始创建预约记录');
 
     // 开始事务
     await db.run('BEGIN TRANSACTION');
@@ -222,6 +327,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
       // 如果需要同时创建带看记录
       if (create_viewing_record) {
+        requestLogger.debug({
+          requestId
+        }, '开始创建关联的客户和带看记录');
+
         // 查找或创建客户记录
         let customer = await db.get(
           'SELECT * FROM customers WHERE phone = ?',
@@ -244,8 +353,19 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           ]);
           
           customerId = customerResult.lastID;
+
+          requestLogger.debug({
+            customerId,
+            customerName: customer_name,
+            requestId
+          }, '创建了新客户记录');
         } else {
           customerId = customer.id;
+          requestLogger.debug({
+            customerId,
+            customerName: customer.name,
+            requestId
+          }, '使用了现有客户记录');
         }
 
         // 创建带看记录
@@ -284,10 +404,55 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
             updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `, [customerId, customerId, viewing_feedback, customerId]);
+
+        requestLogger.debug({
+          viewingRecordId,
+          commission,
+          requestId
+        }, '创建了带看记录并更新了客户统计');
       }
 
       // 提交事务
       await db.run('COMMIT');
+
+      const duration = Date.now() - startTime;
+
+      // 记录业务操作成功
+      if (create_viewing_record) {
+        businessLogger.appointment('created_with_viewing', appointmentResult.lastID.toString(), {
+          requestId,
+          property_name,
+          customer_name,
+          customer_phone,
+          agent_name,
+          customerId,
+          viewingRecordId,
+          commission,
+          duration
+        });
+      } else {
+        businessLogger.appointment('created', appointmentResult.lastID.toString(), {
+          requestId,
+          property_name,
+          customer_name,
+          customer_phone,
+          agent_name,
+          type,
+          duration
+        });
+      }
+
+      // 记录API请求完成
+      logApiRequest('POST', '/api/appointments', 201, duration);
+      
+      requestLogger.info({
+        statusCode: 201,
+        duration,
+        appointmentId: appointmentResult.lastID,
+        customerId,
+        viewingRecordId,
+        requestId
+      }, `API请求成功完成 - ${create_viewing_record ? '预约和带看记录创建成功' : '预约创建成功'}`);
 
       return createSuccessResponse({ 
         id: appointmentResult.lastID,
@@ -298,6 +463,26 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     } catch (error) {
       // 回滚事务
       await db.run('ROLLBACK');
+      
+      requestLogger.error({
+        error: error instanceof Error ? error.message : error,
+        requestId
+      }, '事务执行失败，已回滚');
+
       throw createDatabaseError('创建预约', error as Error);
     }
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    
+    // 记录API请求失败
+    logApiRequest('POST', '/api/appointments', 500, duration, error as Error);
+    
+    requestLogger.error({
+      error: error instanceof Error ? error.message : error,
+      duration,
+      requestId
+    }, 'API请求失败 - 预约创建失败');
+
+    throw error; // 重新抛出错误让错误处理器处理
+  }
 }); 
