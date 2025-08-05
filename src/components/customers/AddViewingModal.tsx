@@ -11,6 +11,7 @@ import {
   ROOM_TAG_TEXT_BY_STRING, VIEWER_TYPE_TEXT_BY_STRING,
   VIEWING_STATUS_TEXT, VIEWING_FEEDBACK_TEXT
 } from '@/utils/constants';
+import CommunityAutoComplete from './CommunityAutoComplete';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -76,7 +77,7 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
       onOk={() => form.submit()}
       confirmLoading={loading}
       width={600}
-      destroyOnHidden
+      destroyOnClose
     >
       <Form
         form={form}
@@ -109,7 +110,7 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
               name="property_name"
               label="带看楼盘"
             >
-              <Input placeholder="请输入楼盘名称" />
+              <CommunityAutoComplete placeholder="请输入楼盘名称进行搜索" />
             </Form.Item>
           </Col>
         </Row>

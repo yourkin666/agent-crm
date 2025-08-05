@@ -11,6 +11,7 @@ import {
   CUSTOMER_STATUS_TEXT, SOURCE_CHANNEL_TEXT, BUSINESS_TYPE_TEXT,
   ROOM_TYPE_TEXT, ROOM_TAG_TEXT, LEASE_PERIOD_TEXT
 } from '@/utils/constants';
+import CommunityAutoComplete from './CommunityAutoComplete';
 
 const { Option } = Select;
 
@@ -122,7 +123,7 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
               name="community"
               label="咨询小区"
             >
-              <Input placeholder="请输入咨询小区名称" />
+              <CommunityAutoComplete placeholder="请输入小区名称进行搜索" />
             </Form.Item>
           </Col>
           <Col span={12}>

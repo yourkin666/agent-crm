@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../lib/database';
+import { businessLogger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
     const db = await getDatabase();
 
-    console.log('开始数据同步...');
+    businessLogger.sync('started', { timestamp: new Date().toISOString() });
 
     // 开始事务
     await db.run('BEGIN TRANSACTION');
@@ -67,7 +68,11 @@ export async function POST(request: NextRequest) {
             syncResults.createdViewingRecords++;
           }
 
-          console.log(`已为预约${appointment.id}创建客户${customerId}`);
+          businessLogger.customer('created_from_appointment', customerId.toString(), { 
+            appointmentId: appointment.id,
+            customerName: appointment.customer_name,
+            source: 'sync_from_appointment'
+          });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : '未知错误';
           syncResults.errors.push(`预约${appointment.id}同步失败: ${errorMessage}`);
@@ -102,7 +107,11 @@ export async function POST(request: NextRequest) {
           ]);
 
           syncResults.createdCustomers++;
-          console.log(`已为客户${appointment.customer_name}创建记录`);
+          businessLogger.customer('created_from_orphaned_appointment', undefined, { 
+            customerName: appointment.customer_name,
+            customerPhone: appointment.customer_phone,
+            source: 'sync_orphaned_appointment'
+          });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : '未知错误';
           syncResults.errors.push(`客户${appointment.customer_name}创建失败: ${errorMessage}`);
@@ -124,7 +133,7 @@ export async function POST(request: NextRequest) {
       // 提交事务
       await db.run('COMMIT');
 
-      console.log('数据同步完成:', syncResults);
+      businessLogger.sync('completed', syncResults);
 
       return NextResponse.json({
         success: true,
@@ -139,7 +148,10 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('数据同步失败:', error);
+    businessLogger.sync('failed', { 
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined 
+    });
     const errorMessage = error instanceof Error ? error.message : '未知错误';
     return NextResponse.json(
       { success: false, error: '数据同步失败', details: errorMessage },

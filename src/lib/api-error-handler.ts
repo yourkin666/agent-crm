@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ApiResponse } from '@/types';
+import { logger } from './logger';
 
 /**
  * API 错误类型枚举
@@ -71,12 +72,13 @@ export function createErrorResponse(
   }
 
   // 记录错误日志
-  console.error(`API Error [${response.errorType}]:`, {
+  logger.error({
+    errorType: response.errorType,
     message: response.error,
     statusCode,
     details: response.details,
     stack: error instanceof Error ? error.stack : undefined,
-  });
+  }, `API Error [${response.errorType}]: ${response.error}`);
 
   return NextResponse.json(response, { status: statusCode });
 }
