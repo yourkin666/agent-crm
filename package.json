@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:setup": "node scripts/setup-database.js"
+    "db:setup": "node scripts/setup-database.js",
+    "db:reset": "rm -f data/crm.db && npm run db:setup"
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",

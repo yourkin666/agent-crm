@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../lib/database';
+import { Appointment, AppointmentFilterParams, PaginatedResponse, ApiResponse } from '../../../types';
+import { 
+  withErrorHandler, 
+  createSuccessResponse, 
+  createValidationError, 
+  createNotFoundError, 
+  createDatabaseError 
+} from '../../../lib/api-error-handler';
+import { validateAppointmentData } from '../../../lib/validation';
 
 // GET /api/appointments - 获取预约列表（包含预约记录和带看记录）
 export async function GET(request: NextRequest) {
@@ -162,26 +171,28 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const db = await getDatabase();
-    const body = await request.json();
-    
-    const {
-      property_name,
-      property_address,
-      customer_name,
-      customer_phone,
-      agent_name,
-      appointment_time,
-      status = 1,
-      type,
-      city,
-      create_viewing_record = false, // 新增：是否同时创建带看记录
-      viewing_feedback = 0,
-      commission = 0,
-      notes = ''
-    } = body;
+export const POST = withErrorHandler(async (request: NextRequest) => {
+  const db = await getDatabase();
+  const body = await request.json();
+  
+  // 验证输入数据
+  validateAppointmentData(body);
+  
+  const {
+    property_name,
+    property_address,
+    customer_name,
+    customer_phone,
+    agent_name,
+    appointment_time,
+    status = 1,
+    type,
+    city,
+    create_viewing_record = false, // 新增：是否同时创建带看记录
+    viewing_feedback = 0,
+    commission = 0,
+    notes = ''
+  } = body;
 
     // 开始事务
     await db.run('BEGIN TRANSACTION');
@@ -277,27 +288,15 @@ export async function POST(request: NextRequest) {
       // 提交事务
       await db.run('COMMIT');
 
-      return NextResponse.json({
-        success: true,
-        data: { 
-          id: appointmentResult.lastID,
-          viewing_record_id: viewingRecordId,
-          customer_id: customerId
-        },
-        message: create_viewing_record ? '预约和带看记录添加成功' : '预约添加成功'
-      });
+      return createSuccessResponse({ 
+        id: appointmentResult.lastID,
+        viewing_record_id: viewingRecordId,
+        customer_id: customerId
+      }, create_viewing_record ? '预约和带看记录添加成功' : '预约添加成功', 201);
 
     } catch (error) {
       // 回滚事务
       await db.run('ROLLBACK');
-      throw error;
+      throw createDatabaseError('创建预约', error as Error);
     }
-
-  } catch (error) {
-    console.error('添加预约失败:', error);
-    return NextResponse.json(
-      { success: false, error: '服务器内部错误' },
-      { status: 500 }
-    );
-  }
-} 
+}); 

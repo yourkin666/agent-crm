@@ -152,6 +152,8 @@ export interface ApiResponse<T = any> {
   data?: T;
   message?: string;
   error?: string;
+  errorType?: string;
+  details?: any;
 }
 
 // 分页接口

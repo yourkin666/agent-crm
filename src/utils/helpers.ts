@@ -9,6 +9,30 @@ import {
 /**
  * 格式化手机号显示
  * @param phone 手机号
+ * @returns 格式化后的手机号 (如: 138****1234)
+ */
+export function formatPhoneNumber(phone: string): string {
+  if (!phone) return '';
+  if (phone.length === 11) {
+    return `${phone.slice(0, 3)}****${phone.slice(-4)}`;
+  }
+  return phone;
+}
+
+/**
+ * 格式化货币显示
+ * @param amount 金额
+ * @param currency 货币符号，默认为 ¥
+ * @returns 格式化后的金额 (如: ¥1,234.56)
+ */
+export function formatCurrency(amount: number, currency: string = '¥'): string {
+  if (amount === 0) return `${currency}0`;
+  return `${currency}${amount.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/**
+ * 格式化手机号显示
+ * @param phone 手机号
  * @returns 完整的手机号
  */
 export function formatPhone(phone: string): string {
