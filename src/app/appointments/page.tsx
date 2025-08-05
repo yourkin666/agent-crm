@@ -20,10 +20,6 @@ import {
 import { formatDateTime, formatDate, formatPhone } from '@/utils/helpers';
 
 // 动态导入 Modal 组件以减少初始加载时间
-const AddAppointmentModal = dynamic(() => import('@/components/appointments/AddAppointmentModal'), {
-    ssr: false,
-    loading: () => <div>加载中...</div>
-});
 
 const EditAppointmentModal = dynamic(() => import('@/components/appointments/EditAppointmentModal'), {
     ssr: false,
@@ -51,8 +47,7 @@ export default function AppointmentsPage() {
         pageSize: DEFAULT_PAGE_SIZE,
     });
 
-    // 新增预约模态框状态
-    const [addModalVisible, setAddModalVisible] = useState(false);
+
 
     // 编辑预约模态框状态
     const [editModalVisible, setEditModalVisible] = useState(false);
@@ -181,16 +176,9 @@ export default function AppointmentsPage() {
         });
     };
 
-    // 新增预约
-    const handleAddAppointment = () => {
-        setAddModalVisible(true);
-    };
 
-    // 新增预约成功回调
-    const handleAddSuccess = () => {
-        // 重新加载预约列表
-        loadAppointments(filters);
-    };
+
+
 
     // 编辑预约
     const handleEditAppointment = (appointment: Appointment) => {
@@ -415,15 +403,6 @@ export default function AppointmentsPage() {
                 <div className="page-header-compact">
                     <div className="flex justify-between items-center">
                         <h1 className="page-title-compact">预约带看</h1>
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            size="large"
-                            onClick={handleAddAppointment}
-                            className="shadow-md hover:shadow-lg transition-shadow"
-                        >
-                            新增预约
-                        </Button>
                     </div>
                 </div>
 
@@ -508,12 +487,7 @@ export default function AppointmentsPage() {
                     </div>
                 </Card>
 
-                {/* 新增预约模态框 */}
-                <AddAppointmentModal
-                    visible={addModalVisible}
-                    onCancel={() => setAddModalVisible(false)}
-                    onSuccess={handleAddSuccess}
-                />
+
 
                 {/* 编辑预约模态框 */}
                 <EditAppointmentModal
@@ -528,4 +502,4 @@ export default function AppointmentsPage() {
             </div>
         </MainLayout>
     );
-} 
+}

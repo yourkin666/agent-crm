@@ -71,7 +71,7 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
 
   return (
     <Modal
-      title={`为客户 "${customer.name}" 添加带看记录`}
+      title="添加带看记录"
       open={visible}
       onCancel={handleCancel}
       onOk={() => form.submit()}
@@ -108,18 +108,18 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
           <Col span={12}>
             <Form.Item
               name="property_name"
-              label="带看楼盘"
+              label="物业地址"
             >
-              <CommunityAutoComplete placeholder="请输入楼盘名称进行搜索" />
+              <CommunityAutoComplete placeholder="请输入物业地址进行搜索" />
             </Form.Item>
           </Col>
         </Row>
 
         <Form.Item
           name="property_address"
-          label="楼盘地址"
+          label="详细地址"
         >
-          <Input placeholder="请输入楼盘详细地址" />
+          <Input placeholder="请输入详细地址" />
         </Form.Item>
 
         <Row gutter={16}>
@@ -238,4 +238,4 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
       </Form>
     </Modal>
   );
-} 
+}

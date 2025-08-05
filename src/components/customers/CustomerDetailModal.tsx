@@ -4,10 +4,11 @@ import React, { useState, useEffect } from 'react';
 import {
   Modal, Tabs, Row, Col, Tag, Table, Empty, Spin, message, Button
 } from 'antd';
-import { EditOutlined } from '@ant-design/icons';
+import { EditOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { TabsProps } from 'antd';
 import { Customer, ViewingRecord } from '@/types';
+import AddViewingModal from './AddViewingModal';
 import {
   CUSTOMER_STATUS_TEXT, CUSTOMER_STATUS_COLOR,
   SOURCE_CHANNEL_TEXT_BY_STRING, BUSINESS_TYPE_TEXT_BY_STRING,
@@ -30,6 +31,7 @@ interface CustomerDetailModalProps {
 export default function CustomerDetailModal({ visible, customer, onCancel, onEdit }: CustomerDetailModalProps) {
   const [viewingRecords, setViewingRecords] = useState<ViewingRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [addViewingVisible, setAddViewingVisible] = useState(false);
 
   // 加载客户的带看记录
   const loadViewingRecords = async (customerId: number) => {
@@ -122,6 +124,12 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
 
   if (!customer) return null;
 
+  const handleAddViewingSuccess = () => {
+    if (customer) {
+      loadViewingRecords(customer.id);
+    }
+  };
+
   // 定义Tab项
   const tabItems: TabsProps['items'] = [
     {
@@ -131,7 +139,20 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
         <div className="customer-detail-content">
           {/* 客户信息部分 */}
           <div className="section-block">
-            <div className="section-title">客户信息</div>
+            <div className="section-title flex justify-between items-center">
+              <span>客户信息</span>
+              {onEdit && (
+                <Button 
+                  type="primary"
+                  icon={<EditOutlined />}
+                  onClick={() => onEdit()}
+                  className="flex items-center gap-1 px-3 py-1 rounded-md"
+                  size="small"
+                >
+                  <span className="text-sm font-medium">编辑</span>
+                </Button>
+              )}
+            </div>
             <Row gutter={[16, 8]}>
               <Col span={12}>
                 <div className="info-item">
@@ -249,6 +270,18 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
       label: `带看记录 (${viewingRecords.length})`,
       children: (
         <div className="mt-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-base font-medium">带看记录列表</h3>
+            <Button 
+              type="primary"
+              icon={<PlusOutlined />}
+              className="flex items-center gap-1"
+              size="small"
+              onClick={() => setAddViewingVisible(true)}
+            >
+              添加带看
+            </Button>
+          </div>
           {loading ? (
             <div className="text-center py-8">
               <Spin size="large" />
@@ -273,37 +306,37 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
     },
   ];
 
-  // 自定义标题，包含编辑按钮
+  // 简化标题，移除编辑按钮
   const modalTitle = (
-    <div className="flex justify-between items-center">
-      <span>客户信息</span>
-      {onEdit && (
-        <Button 
-          type="link" 
-          icon={<EditOutlined />}
-          onClick={() => onEdit()}
-          className="text-blue-600 hover:text-blue-700"
-        >
-          编辑信息
-        </Button>
-      )}
+    <div className="flex items-center">
+      <span className="text-lg font-semibold">客户信息</span>
+      <span className="ml-2 text-sm text-gray-500">{customer.name}</span>
     </div>
   );
 
   return (
-    <Modal
-      title={modalTitle}
-      open={visible}
-      onCancel={onCancel}
-      footer={null}
-      width={1000}
-      destroyOnHidden
-    >
-      <Tabs
-        defaultActiveKey="info"
-        size="large"
-        items={tabItems}
+    <>
+      <Modal
+        title={modalTitle}
+        open={visible}
+        onCancel={onCancel}
+        footer={null}
+        width={1000}
+        destroyOnHidden
+      >
+        <Tabs
+          defaultActiveKey="info"
+          size="large"
+          items={tabItems}
+        />
+      </Modal>
+
+      <AddViewingModal
+        visible={addViewingVisible}
+        customer={customer}
+        onCancel={() => setAddViewingVisible(false)}
+        onSuccess={handleAddViewingSuccess}
       />
-    </Modal>
+    </>
   );
-} 
+}
