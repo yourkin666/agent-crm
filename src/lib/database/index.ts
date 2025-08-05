@@ -12,8 +12,9 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// 创建数据库连接
+// 全局数据库连接和初始化状态
 let db: Database | null = null;
+let isInitialized: boolean = false;
 
 export async function getDatabase(): Promise<Database> {
   if (!db) {
@@ -25,8 +26,17 @@ export async function getDatabase(): Promise<Database> {
     // 启用外键约束
     await db.exec('PRAGMA foreign_keys = ON');
     
-    // 初始化数据库表
-    await initializeDatabase();
+    // 性能优化配置
+    await db.exec('PRAGMA journal_mode = WAL');      // 启用WAL模式提高并发性能
+    await db.exec('PRAGMA synchronous = NORMAL');    // 平衡性能和安全性
+    await db.exec('PRAGMA cache_size = 10000');      // 增加缓存大小
+    await db.exec('PRAGMA temp_store = memory');     // 临时文件存储在内存中
+    
+    // 只初始化一次数据库表结构
+    if (!isInitialized) {
+      await initializeDatabase();
+      isInitialized = true;
+    }
   }
   return db;
 }
@@ -49,6 +59,7 @@ export async function closeDatabase() {
   if (db) {
     await db.close();
     db = null;
+    isInitialized = false; // 重置初始化状态
   }
 }
 
@@ -144,6 +155,18 @@ export class DatabaseManager {
       pageSize,
       totalPages: Math.ceil(total / pageSize)
     };
+  }
+
+  // 检查连接状态
+  async healthCheck(): Promise<boolean> {
+    try {
+      const db = await this.ensureDb();
+      await db.get('SELECT 1');
+      return true;
+    } catch (error) {
+      console.error('Database health check failed:', error);
+      return false;
+    }
   }
 }
 
