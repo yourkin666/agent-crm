@@ -164,10 +164,10 @@ export default function CustomersPage() {
         loadCustomers(filters);
     };
 
-    // 查看带看记录详情
+    // 查看带看记录详情 - 打开客户详情并切换到带看记录标签页
     const handleViewingDetails = (customer: Customer) => {
-        message.info(`查看客户 ${customer.name} 的带看记录详情功能正在开发中...`);
-        // TODO: 实现带看记录详情弹窗，显示该客户的所有带看记录
+        setCurrentCustomer(customer);
+        setDetailModalVisible(true);
     };
 
     // 表格列定义
@@ -446,6 +446,7 @@ export default function CustomersPage() {
                 <CustomerDetailModal
                     visible={detailModalVisible}
                     customer={currentCustomer}
+                    activeTab="viewing"
                     onCancel={() => {
                         setDetailModalVisible(false);
                         setCurrentCustomer(null);
@@ -488,4 +489,4 @@ export default function CustomersPage() {
             </div>
         </MainLayout>
     );
-} 
+}

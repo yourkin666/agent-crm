@@ -26,12 +26,14 @@ interface CustomerDetailModalProps {
   customer: Customer | null;
   onCancel: () => void;
   onEdit: () => void;
+  activeTab?: string;
 }
 
-export default function CustomerDetailModal({ visible, customer, onCancel, onEdit }: CustomerDetailModalProps) {
+export default function CustomerDetailModal({ visible, customer, onCancel, onEdit, activeTab }: CustomerDetailModalProps) {
   const [viewingRecords, setViewingRecords] = useState<ViewingRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [addViewingVisible, setAddViewingVisible] = useState(false);
+  const [currentTab, setCurrentTab] = useState('info');
 
   // 加载客户的带看记录
   const loadViewingRecords = async (customerId: number) => {
@@ -59,6 +61,15 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
       loadViewingRecords(customer.id);
     }
   }, [visible, customer]);
+
+  // 当activeTab变化时更新当前活动标签
+  useEffect(() => {
+    if (activeTab !== undefined && visible) {
+      setCurrentTab(activeTab);
+    } else if (activeTab === undefined && visible) {
+      setCurrentTab('info');
+    }
+  }, [activeTab, visible]);
 
   // 带看记录表格列定义
   const viewingColumns: ColumnsType<ViewingRecord> = [
@@ -325,9 +336,10 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
         destroyOnHidden
       >
         <Tabs
-          defaultActiveKey="info"
+          activeKey={currentTab}
           size="large"
           items={tabItems}
+          onChange={setCurrentTab}
         />
       </Modal>
 
