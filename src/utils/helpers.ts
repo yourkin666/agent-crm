@@ -310,7 +310,7 @@ export function parseRoomTypes(typesJson: string | null): RoomType[] {
  */
 export function formatBusinessTypes(types: BusinessType[]): string {
   if (!types || types.length === 0) return '';
-  return types.map(type => BUSINESS_TYPE_TEXT_BY_STRING[type as string] || type).join(', ');
+  return types.map(type => (BUSINESS_TYPE_TEXT_BY_STRING as Record<string, string>)[type as string] || type).join(', ');
 }
 
 /**
@@ -320,10 +320,10 @@ export function formatBusinessTypes(types: BusinessType[]): string {
  */
 export function formatRoomTypesDisplay(types: RoomType[]): string {
   if (!types || types.length === 0) return '';
-  
+
   return types.map(type => {
     // 直接使用字符串版本的常量，因为从API返回的是字符串值
-    return ROOM_TYPE_TEXT_BY_STRING[type as string] || type;
+    return (ROOM_TYPE_TEXT_BY_STRING as Record<string, string>)[type as string] || type;
   }).join(', ');
 }
 
