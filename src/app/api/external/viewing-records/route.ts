@@ -8,6 +8,135 @@ function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+// 外部房源查询API接口
+interface ExternalPropertyResponse {
+  code: number;
+  message: string;
+  data: Array<{
+    id: number;
+    companyId: number;
+    businessType: number;
+    housingId: number;
+    houseAreaId: number;
+    houseAreaName: string;
+    cityId: number;
+    cityName: string;
+    propertyAddrId: number;
+    propertyAddr: string;
+    detailAddr: string;
+    peripheryKeyword?: string;
+    longitude: string;
+    latitude: string;
+    roomId: number;
+    insideSpace?: number;
+    orientation?: string;
+    unitType: string;
+    floor?: string;
+    totalFloor?: string;
+    advisorId: number;
+    advisorName: string;
+    companyName: string;
+    companyAbbreviation: string;
+    searchBusinessType: number;
+    houseTypeId: number;
+  }>;
+  timestamp: number;
+}
+
+// 调用外部房源查询API
+async function queryExternalPropertyInfo(propertyAddr: string, detailAddr?: string, requestLogger?: any): Promise<any> {
+  const requestId = generateRequestId();
+  
+  try {
+    const baseUrl = 'https://ai-agent-test.quanfangtongvip.com/housing-push';
+    const searchParams = new URLSearchParams({
+      propertyAddr: propertyAddr,
+      limit: '10' // 限制返回10条结果
+    });
+    
+    if (detailAddr) {
+      searchParams.append('detailAddr', detailAddr);
+    }
+    
+    // 正确的API路径已确认：/api/housing/search-properties
+    const apiUrl = `${baseUrl}/api/housing/search-properties?${searchParams.toString()}`;
+    
+    requestLogger?.debug({
+      apiUrl,
+      propertyAddr,
+      detailAddr,
+      requestId
+    }, '开始调用外部房源查询API');
+    
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'CRM-System/1.0'
+      },
+      // 设置超时时间
+      signal: AbortSignal.timeout(10000) // 10秒超时
+    });
+    
+    if (!response.ok) {
+      requestLogger?.warn({
+        status: response.status,
+        statusText: response.statusText,
+        propertyAddr,
+        detailAddr,
+        requestId
+      }, '外部房源查询API请求失败');
+      return null;
+    }
+    
+    const data: ExternalPropertyResponse = await response.json();
+    
+    requestLogger?.debug({
+      responseCode: data.code,
+      dataLength: data.data?.length,
+      propertyAddr,
+      detailAddr,
+      requestId
+    }, '外部房源查询API响应成功');
+    
+    if (data.code === 200 && data.data && data.data.length > 0) {
+      // 返回第一个匹配的房源信息
+      const propertyInfo = data.data[0];
+      
+      requestLogger?.info({
+        propertyAddrId: propertyInfo.propertyAddrId,
+        housingId: propertyInfo.housingId,
+        cityName: propertyInfo.cityName,
+        houseAreaName: propertyInfo.houseAreaName,
+        advisorName: propertyInfo.advisorName,
+        companyName: propertyInfo.companyName,
+        requestId
+      }, '成功获取房源详细信息');
+      
+      return propertyInfo;
+    } else {
+      requestLogger?.warn({
+        responseCode: data.code,
+        message: data.message,
+        propertyAddr,
+        detailAddr,
+        requestId
+      }, '外部房源查询API未找到匹配房源');
+      return null;
+    }
+    
+  } catch (error) {
+    requestLogger?.error({
+      error: error instanceof Error ? error.message : error,
+      propertyAddr,
+      detailAddr,
+      requestId
+    }, '调用外部房源查询API发生错误');
+    // 返回null而不是抛出错误，让带看记录创建可以继续进行
+    return null;
+  }
+}
+
 // 外部带看记录数据验证
 function validateExternalViewingData(data: any): void {
   // 必填字段验证
@@ -220,13 +349,91 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       }
     }
 
-    // 步骤3: 创建带看记录
+    // 步骤3: 查询外部房源信息（如果提供了物业地址）
+    let externalPropertyInfo = null;
+    if (property_name) {
+      requestLogger.debug({
+        customerId,
+        userId,
+        property_name,
+        property_address,
+        requestId
+      }, '开始查询外部房源信息');
+
+      externalPropertyInfo = await queryExternalPropertyInfo(
+        property_name, 
+        property_address, 
+        requestLogger
+      );
+
+      if (externalPropertyInfo) {
+        requestLogger.info({
+          propertyAddrId: externalPropertyInfo.propertyAddrId,
+          housingId: externalPropertyInfo.housingId,
+          cityName: externalPropertyInfo.cityName,
+          houseAreaName: externalPropertyInfo.houseAreaName,
+          advisorName: externalPropertyInfo.advisorName,
+          companyName: externalPropertyInfo.companyName,
+          unitType: externalPropertyInfo.unitType,
+          requestId
+        }, '外部房源信息查询成功，将自动填入带看记录');
+      } else {
+        requestLogger.debug({
+          property_name,
+          property_address,
+          requestId
+        }, '未查询到外部房源信息，使用原始数据创建带看记录');
+      }
+    }
+
+    // 步骤4: 创建带看记录
     requestLogger.debug({
       customerId,
       userId,
       property_name,
+      hasExternalPropertyInfo: !!externalPropertyInfo,
       requestId
     }, '开始创建带看记录');
+
+    // 合并外部查询的房源信息和原始传入的数据
+    // 优先使用外部查询到的数据，如果没有则使用原始数据
+    const finalHousingData = {
+      housingId: externalPropertyInfo?.housingId || housingId,
+      houseAreaId: externalPropertyInfo?.houseAreaId || houseAreaId,
+      houseAreaName: externalPropertyInfo?.houseAreaName || houseAreaName,
+      cityId: externalPropertyInfo?.cityId || cityId,
+      cityName: externalPropertyInfo?.cityName || cityName,
+      propertyAddrId: externalPropertyInfo?.propertyAddrId || propertyAddrId,
+      unitType: externalPropertyInfo?.unitType || unitType,
+      longitude: externalPropertyInfo?.longitude || longitude,
+      latitude: externalPropertyInfo?.latitude || latitude,
+      roomId: externalPropertyInfo?.roomId || roomId,
+      advisorId: externalPropertyInfo?.advisorId || advisorId,
+      advisorName: externalPropertyInfo?.advisorName || advisorName,
+      companyName: externalPropertyInfo?.companyName || companyName,
+      companyAbbreviation: externalPropertyInfo?.companyAbbreviation || companyAbbreviation,
+      houseTypeId: externalPropertyInfo?.houseTypeId || houseTypeId
+    };
+
+    // 记录最终使用的房源数据
+    requestLogger.debug({
+      originalData: {
+        housingId,
+        cityName,
+        houseAreaName,
+        advisorName,
+        companyName
+      },
+      externalData: externalPropertyInfo ? {
+        housingId: externalPropertyInfo.housingId,
+        cityName: externalPropertyInfo.cityName,
+        houseAreaName: externalPropertyInfo.houseAreaName,
+        advisorName: externalPropertyInfo.advisorName,
+        companyName: externalPropertyInfo.companyName
+      } : null,
+      finalData: finalHousingData,
+      requestId
+    }, '房源数据合并完成');
 
     const viewingResult = await db.run(`
       INSERT INTO viewing_records (
@@ -254,24 +461,24 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       customer_phone || '',
       userId,
       botId,
-      housingId,
-      houseAreaId,
-      houseAreaName,
-      cityId,
-      cityName,
-      propertyAddrId,
-      unitType,
-      longitude,
-      latitude,
-      roomId,
-      advisorId,
-      advisorName,
-      companyName,
-      companyAbbreviation,
-      houseTypeId
+      finalHousingData.housingId,
+      finalHousingData.houseAreaId,
+      finalHousingData.houseAreaName,
+      finalHousingData.cityId,
+      finalHousingData.cityName,
+      finalHousingData.propertyAddrId,
+      finalHousingData.unitType,
+      finalHousingData.longitude,
+      finalHousingData.latitude,
+      finalHousingData.roomId,
+      finalHousingData.advisorId,
+      finalHousingData.advisorName,
+      finalHousingData.companyName,
+      finalHousingData.companyAbbreviation,
+      finalHousingData.houseTypeId
     ]);
 
-    // 步骤4: 更新客户统计信息
+    // 步骤5: 更新客户统计信息
     if (customerId && viewingResult.lastID) {
       requestLogger.debug({
         customerId,
@@ -296,17 +503,33 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         customer_name,
         property_name,
         commission,
+        externalPropertyFound: !!externalPropertyInfo,
+        externalPropertyData: externalPropertyInfo ? {
+          propertyAddrId: externalPropertyInfo.propertyAddrId,
+          cityName: externalPropertyInfo.cityName,
+          houseAreaName: externalPropertyInfo.houseAreaName,
+          advisorName: externalPropertyInfo.advisorName
+        } : null,
         requestId
-      }, '外部API请求成功完成 - 带看记录录入成功');
+      }, '外部API请求成功完成 - 带看记录录入成功（已自动填入外部房源信息）');
 
       return createSuccessResponse(
         {
           viewing_record_id: viewingResult.lastID,
           customer_id: customerId,
           customer_action: customerAction,
-          userId
+          userId,
+          external_property_enriched: !!externalPropertyInfo,
+          external_property_data: externalPropertyInfo ? {
+            propertyAddrId: externalPropertyInfo.propertyAddrId,
+            housingId: externalPropertyInfo.housingId,
+            cityName: externalPropertyInfo.cityName,
+            houseAreaName: externalPropertyInfo.houseAreaName,
+            advisorName: externalPropertyInfo.advisorName,
+            companyName: externalPropertyInfo.companyName
+          } : null
         },
-        `带看记录录入成功，客户${customerAction === 'created' ? '已创建' : '已更新'}`,
+        `带看记录录入成功，客户${customerAction === 'created' ? '已创建' : '已更新'}${externalPropertyInfo ? '，已自动填入外部房源信息' : ''}`,
         201
       );
     }
