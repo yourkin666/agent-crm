@@ -1,8 +1,10 @@
 import dayjs from 'dayjs';
 import { RoomTag, BusinessType, RoomType } from '@/types';
 import {
-  BUSINESS_TYPE_TEXT, ROOM_TYPE_TEXT, ROOM_TAG_TEXT,
-  BUSINESS_TYPE_TEXT_BY_STRING, ROOM_TYPE_TEXT_BY_STRING, ROOM_TAG_TEXT_BY_STRING,
+  CUSTOMER_STATUS_TEXT, SOURCE_CHANNEL_TEXT, BUSINESS_TYPE_TEXT,
+  ROOM_TYPE_TEXT, ROOM_TAG_TEXT,
+  ROOM_TYPE_TEXT_BY_STRING,
+  BUSINESS_TYPE_TEXT_BY_STRING, ROOM_TAG_TEXT_BY_STRING,
   PHONE_REGEX, PRICE_RANGE_REGEX
 } from './constants';
 
@@ -308,7 +310,7 @@ export function parseRoomTypes(typesJson: string | null): RoomType[] {
  */
 export function formatBusinessTypes(types: BusinessType[]): string {
   if (!types || types.length === 0) return '';
-  return types.map(type => BUSINESS_TYPE_TEXT[type]).join(', ');
+  return types.map(type => BUSINESS_TYPE_TEXT_BY_STRING[type as string] || type).join(', ');
 }
 
 /**
@@ -318,7 +320,11 @@ export function formatBusinessTypes(types: BusinessType[]): string {
  */
 export function formatRoomTypesDisplay(types: RoomType[]): string {
   if (!types || types.length === 0) return '';
-  return types.map(type => ROOM_TYPE_TEXT[type]).join(', ');
+  
+  return types.map(type => {
+    // 直接使用字符串版本的常量，因为从API返回的是字符串值
+    return ROOM_TYPE_TEXT_BY_STRING[type as string] || type;
+  }).join(', ');
 }
 
 /**

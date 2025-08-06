@@ -19,6 +19,38 @@ function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+// 辅助函数：解析筛选参数，支持单值和多值
+function parseFilterParam(value: string | null, type: 'string' | 'number' | 'boolean'): any {
+  if (!value) return undefined;
+  
+  try {
+    // 尝试解析为数组
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed.map(item => {
+        switch (type) {
+          case 'number': return parseInt(item);
+          case 'boolean': return item === 'true' || item === true;
+          default: return item;
+        }
+      });
+    }
+    // 单值情况
+    switch (type) {
+      case 'number': return parseInt(parsed);
+      case 'boolean': return parsed === 'true' || parsed === true;
+      default: return parsed;
+    }
+  } catch {
+    // 解析失败，按单值处理
+    switch (type) {
+      case 'number': return parseInt(value);
+      case 'boolean': return value === 'true';
+      default: return value;
+    }
+  }
+}
+
 // GET /api/customers - 获取客户列表
 export const GET = withErrorHandler(async (request: NextRequest) => {
   const requestId = generateRequestId();
@@ -41,12 +73,18 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     pageSize: parseInt(searchParams.get('pageSize') || DEFAULT_PAGE_SIZE.toString()),
     name: searchParams.get('name') || undefined,
     phone: searchParams.get('phone') || undefined,
-    status: searchParams.get('status') ? parseInt(searchParams.get('status')!) : undefined,
-    source_channel: searchParams.get('source_channel') as SourceChannel | undefined,
-    business_type: searchParams.get('business_type') as BusinessType | undefined,
+    status: parseFilterParam(searchParams.get('status'), 'number'),
+    source_channel: parseFilterParam(searchParams.get('source_channel'), 'string'),
+    business_type: parseFilterParam(searchParams.get('business_type'), 'string'),
     price_min: searchParams.get('price_min') ? parseFloat(searchParams.get('price_min')!) : undefined,
     price_max: searchParams.get('price_max') ? parseFloat(searchParams.get('price_max')!) : undefined,
     community: searchParams.get('community') || undefined,
+    creator: parseFilterParam(searchParams.get('creator'), 'string'),
+    is_agent: parseFilterParam(searchParams.get('is_agent'), 'boolean'),
+    city: parseFilterParam(searchParams.get('city'), 'string'),
+    move_in_days: searchParams.get('move_in_days') ? parseInt(searchParams.get('move_in_days')!) : undefined,
+    viewing_today: searchParams.get('viewing_today') === 'true',
+    my_entries: searchParams.get('my_entries') === 'true',
   };
 
   requestLogger.debug({
@@ -68,19 +106,80 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     params.push(`%${filters.phone}%`);
   }
 
+  // 状态筛选（支持多选）
   if (filters.status) {
-    conditions.push('status = ?');
-    params.push(filters.status);
+    if (Array.isArray(filters.status)) {
+      const placeholders = filters.status.map(() => '?').join(', ');
+      conditions.push(`status IN (${placeholders})`);
+      params.push(...filters.status);
+    } else {
+      conditions.push('status = ?');
+      params.push(filters.status);
+    }
   }
 
+  // 来源渠道筛选（支持多选）
   if (filters.source_channel) {
-    conditions.push('source_channel = ?');
-    params.push(filters.source_channel);
+    if (Array.isArray(filters.source_channel)) {
+      const placeholders = filters.source_channel.map(() => '?').join(', ');
+      conditions.push(`source_channel IN (${placeholders})`);
+      params.push(...filters.source_channel);
+    } else {
+      conditions.push('source_channel = ?');
+      params.push(filters.source_channel);
+    }
   }
 
+  // 业务类型筛选（支持多选）
   if (filters.business_type) {
-    conditions.push('business_type = ?');
-    params.push(filters.business_type);
+    if (Array.isArray(filters.business_type)) {
+      const businessConditions = filters.business_type.map(() => 'business_type LIKE ?').join(' OR ');
+      conditions.push(`(${businessConditions})`);
+      filters.business_type.forEach(type => {
+        params.push(`%"${type}"%`);
+      });
+    } else {
+      conditions.push('business_type LIKE ?');
+      params.push(`%"${filters.business_type}"%`);
+    }
+  }
+
+  // 录入人筛选（支持多选）
+  if (filters.creator) {
+    if (Array.isArray(filters.creator)) {
+      const placeholders = filters.creator.map(() => '?').join(', ');
+      conditions.push(`creator IN (${placeholders})`);
+      params.push(...filters.creator);
+    } else {
+      conditions.push('creator = ?');
+      params.push(filters.creator);
+    }
+  }
+
+  // 录入方式筛选（支持多选）
+  if (filters.is_agent !== undefined) {
+    if (Array.isArray(filters.is_agent)) {
+      const placeholders = filters.is_agent.map(() => '?').join(', ');
+      conditions.push(`is_agent IN (${placeholders})`);
+      params.push(...filters.is_agent.map(val => val ? 1 : 0));
+    } else {
+      conditions.push('is_agent = ?');
+      params.push(filters.is_agent ? 1 : 0);
+    }
+  }
+
+  // 城市筛选（支持多选）
+  if (filters.city) {
+    if (Array.isArray(filters.city)) {
+      const cityConditions = filters.city.map(() => 'community LIKE ?').join(' OR ');
+      conditions.push(`(${cityConditions})`);
+      filters.city.forEach(city => {
+        params.push(`%${city}%`);
+      });
+    } else {
+      conditions.push('community LIKE ?');
+      params.push(`%${filters.city}%`);
+    }
   }
 
   if (filters.community) {
@@ -110,6 +209,31 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       )`);
       params.push(filters.price_max);
     }
+  }
+
+  // 入住时间筛选（X日内入住）
+  if (filters.move_in_days) {
+    const targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() + filters.move_in_days);
+    conditions.push('move_in_date <= ?');
+    params.push(targetDate.toISOString().split('T')[0]);
+  }
+
+  // 今日看房筛选
+  if (filters.viewing_today) {
+    const today = new Date().toISOString().split('T')[0];
+    conditions.push(`id IN (
+      SELECT DISTINCT customer_id FROM viewing_records 
+      WHERE DATE(created_at) = ?
+    )`);
+    params.push(today);
+  }
+
+  // 我录入的筛选（需要传入当前用户信息，这里暂时使用固定值）
+  if (filters.my_entries) {
+    // TODO: 从session或token中获取当前用户
+    conditions.push('creator = ?');
+    params.push('admin'); // 临时使用admin作为当前用户
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';

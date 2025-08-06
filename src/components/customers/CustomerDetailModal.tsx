@@ -280,8 +280,8 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
       key: 'viewing',
       label: `带看记录 (${viewingRecords.length})`,
       children: (
-        <div className="mt-4">
-          <div className="flex justify-between items-center mb-4">
+        <div className="-mt-2">
+          <div className="flex justify-between items-center mb-2">
             <h3 className="text-base font-medium">带看记录列表</h3>
             <Button 
               type="primary"

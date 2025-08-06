@@ -15,6 +15,7 @@ import CustomerDetailModal from '@/components/customers/CustomerDetailModal';
 import AddViewingModal from '@/components/customers/AddViewingModal';
 import AddCustomerModal from '@/components/customers/AddCustomerModal';
 import EditCustomerModal from '@/components/customers/EditCustomerModal';
+import AdvancedFilterModal from '@/components/customers/AdvancedFilterModal';
 import { Customer, CustomerFilterParams, ApiResponse, PaginatedResponse } from '@/types';
 import {
     CUSTOMER_STATUS_TEXT, CUSTOMER_STATUS_COLOR, SOURCE_CHANNEL_TEXT,
@@ -48,6 +49,7 @@ export default function CustomersPage() {
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [addViewingModalVisible, setAddViewingModalVisible] = useState(false);
+    const [advancedFilterModalVisible, setAdvancedFilterModalVisible] = useState(false);
     const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
 
     // 加载客户数据
@@ -59,7 +61,12 @@ export default function CustomersPage() {
 
             Object.entries(finalParams).forEach(([key, value]) => {
                 if (value !== undefined && value !== null && value !== '') {
-                    searchParams.append(key, String(value));
+                    // 对于数组类型的参数，需要序列化为JSON字符串
+                    if (Array.isArray(value)) {
+                        searchParams.append(key, JSON.stringify(value));
+                    } else {
+                        searchParams.append(key, String(value));
+                    }
                 }
             });
 
@@ -84,6 +91,45 @@ export default function CustomersPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    // 处理高级筛选
+    const handleAdvancedFilter = (advancedFilters: Partial<CustomerFilterParams>) => {
+        const newFilters = {
+            ...filters,
+            ...advancedFilters,
+            page: 1, // 重置到第一页
+        };
+        setFilters(newFilters);
+        loadCustomers(newFilters);
+    };
+
+    // 显示高级筛选模态框
+    const showAdvancedFilter = () => {
+        setAdvancedFilterModalVisible(true);
+    };
+
+    // 移除单个筛选条件
+    const removeFilter = (filterKey: string, value?: any) => {
+        const newFilters = { ...filters };
+        
+        if (value !== undefined && Array.isArray(newFilters[filterKey as keyof CustomerFilterParams])) {
+            // 数组类型的筛选条件，移除特定值
+            const currentArray = newFilters[filterKey as keyof CustomerFilterParams] as any[];
+            const newArray = currentArray.filter(item => item !== value);
+            if (newArray.length === 0) {
+                delete newFilters[filterKey as keyof CustomerFilterParams];
+            } else {
+                (newFilters as any)[filterKey] = newArray;
+            }
+        } else {
+            // 非数组类型的筛选条件，直接删除
+            delete newFilters[filterKey as keyof CustomerFilterParams];
+        }
+        
+        newFilters.page = 1; // 重置到第一页
+        setFilters(newFilters);
+        loadCustomers(newFilters);
     };
 
     useEffect(() => {
@@ -373,41 +419,61 @@ export default function CustomersPage() {
                         className="filter-form"
                     >
                         <div className="filter-row">
-                            <Form.Item name="name" label="客户姓名" className="flex-1 min-w-32">
-                                <Input placeholder="客户姓名" allowClear />
-                            </Form.Item>
-                            <Form.Item name="phone" label="手机号" className="flex-1 min-w-32">
-                                <Input placeholder="手机号" allowClear />
-                            </Form.Item>
-                            <Form.Item name="status" label="状态" className="min-w-28">
-                                <Select placeholder="状态" allowClear>
-                                    {Object.entries(CUSTOMER_STATUS_TEXT).map(([value, label]) => (
-                                        <Option key={value} value={parseInt(value)}>
-                                            {label}
-                                        </Option>
-                                    ))}
-                                </Select>
-                            </Form.Item>
-                            <Form.Item name="business_type" label="业务类型" className="min-w-28">
-                                <Select placeholder="类型" allowClear>
-                                    {Object.entries(BUSINESS_TYPE_TEXT).map(([value, label]) => (
-                                        <Option key={value} value={value}>
-                                            {label}
-                                        </Option>
-                                    ))}
-                                </Select>
-                            </Form.Item>
-                            <Form.Item name="community" label="小区" className="flex-1 min-w-32">
-                                <Input placeholder="小区名称" allowClear />
+                            <Form.Item name="name" className="w-64">
+                                <Input placeholder="输入客户姓名、昵称、电话" allowClear />
                             </Form.Item>
                             <Form.Item className="ml-auto">
                                 <Space size="small">
+                                    <Button 
+                                        icon={<SearchOutlined />}
+                                        onClick={showAdvancedFilter}
+                                        className="filter-more-btn"
+                                    >
+                                        更多筛选
+                                    </Button>
                                     <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
                                         搜索
                                     </Button>
                                     <Button onClick={handleReset}>
-                                        重置
+                                        清空
                                     </Button>
+                                    
+                                    {/* 筛选条件标签 */}
+                                    {filters.city && Array.isArray(filters.city) && filters.city.map(city => (
+                                        <span key={city} className="filter-tag">
+                                            {city} <span className="remove-tag" onClick={() => removeFilter('city', city)}>×</span>
+                                        </span>
+                                    ))}
+                                    {filters.status && Array.isArray(filters.status) && filters.status.map(status => (
+                                        <span key={status} className="filter-tag">
+                                            {CUSTOMER_STATUS_TEXT[status as keyof typeof CUSTOMER_STATUS_TEXT]} 
+                                            <span className="remove-tag" onClick={() => removeFilter('status', status)}>×</span>
+                                        </span>
+                                    ))}
+                                    {filters.source_channel && Array.isArray(filters.source_channel) && filters.source_channel.map(channel => (
+                                        <span key={channel} className="filter-tag">
+                                            {SOURCE_CHANNEL_TEXT[channel as keyof typeof SOURCE_CHANNEL_TEXT]} 
+                                            <span className="remove-tag" onClick={() => removeFilter('source_channel', channel)}>×</span>
+                                        </span>
+                                    ))}
+                                    {filters.move_in_days && (
+                                        <span className="filter-tag">
+                                            {filters.move_in_days}日内入住 
+                                            <span className="remove-tag" onClick={() => removeFilter('move_in_days')}>×</span>
+                                        </span>
+                                    )}
+                                    {filters.viewing_today && (
+                                        <span className="filter-tag">
+                                            今日看房 
+                                            <span className="remove-tag" onClick={() => removeFilter('viewing_today')}>×</span>
+                                        </span>
+                                    )}
+                                    {filters.my_entries && (
+                                        <span className="filter-tag">
+                                            我录入的 
+                                            <span className="remove-tag" onClick={() => removeFilter('my_entries')}>×</span>
+                                        </span>
+                                    )}
                                 </Space>
                             </Form.Item>
                         </div>
@@ -485,6 +551,14 @@ export default function CustomersPage() {
                         setCurrentCustomer(null);
                     }}
                     onSuccess={handleEditSuccess}
+                />
+
+                {/* 高级筛选模态框 */}
+                <AdvancedFilterModal
+                    visible={advancedFilterModalVisible}
+                    onCancel={() => setAdvancedFilterModalVisible(false)}
+                    onConfirm={handleAdvancedFilter}
+                    initialFilters={filters}
                 />
             </div>
         </MainLayout>

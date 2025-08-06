@@ -177,12 +177,18 @@ export interface PaginatedResponse<T> {
 export interface CustomerFilterParams extends PaginationParams {
   name?: string;
   phone?: string;
-  status?: CustomerStatus;
-  source_channel?: SourceChannel;
-  business_type?: BusinessType;
+  status?: CustomerStatus | CustomerStatus[]; // 支持多选
+  source_channel?: SourceChannel | SourceChannel[]; // 支持多选
+  business_type?: BusinessType | BusinessType[]; // 支持多选
   price_min?: number;
   price_max?: number;
   community?: string;
+  creator?: string | string[]; // 录入人，支持多选
+  is_agent?: boolean | boolean[]; // 录入方式，支持多选
+  city?: string | string[]; // 城市，支持多选
+  move_in_days?: number; // 入住天数范围（如7日内）
+  viewing_today?: boolean; // 今日看房
+  my_entries?: boolean; // 我录入的
 }
 
 export interface AppointmentFilterParams extends PaginationParams {

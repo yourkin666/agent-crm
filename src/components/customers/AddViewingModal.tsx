@@ -84,8 +84,8 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
         layout="vertical"
         onFinish={handleSubmit}
         initialValues={{
-          business_type: customer.business_type,
-          room_type: customer.room_type,
+          business_type: Array.isArray(customer.business_type) ? customer.business_type[0] : customer.business_type,
+          room_type: Array.isArray(customer.room_type) ? customer.room_type[0] : customer.room_type,
           viewing_status: 1,
           commission: 0,
           viewing_time: dayjs(),
