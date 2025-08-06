@@ -6,11 +6,12 @@ import { AutoComplete, Spin } from 'antd';
 interface CommunityOption {
   value: string;
   label: string;
+  id: number; // 添加ID字段
 }
 
 interface CommunityAutoCompleteProps {
   value?: string;
-  onChange?: (value: string) => void;
+  onChange?: (value: string, selectedOption?: CommunityOption) => void; // 修改onChange回调，添加选中的选项数据
   placeholder?: string;
   style?: React.CSSProperties;
 }
@@ -56,6 +57,7 @@ export default function CommunityAutoComplete({
           // 接口返回的字段是 id 和 addrName
           value: item.addrName,
           label: item.addrName,
+          id: item.id, // 保存ID
         }));
 
         console.log('小区数据加载成功:', communityOptions.length, '条记录');
@@ -107,11 +109,14 @@ export default function CommunityAutoComplete({
 
   const handleSelect = (selectedValue: string) => {
     console.log('AutoComplete 选择值:', selectedValue);
-    onChange?.(selectedValue);
+    // 查找选中的完整选项数据
+    const selectedOption = options.find(option => option.value === selectedValue);
+    onChange?.(selectedValue, selectedOption);
   };
 
   const handleChange = (currentValue: string) => {
     console.log('AutoComplete 输入变化:', currentValue);
+    // 手动输入时不传递选项数据
     onChange?.(currentValue);
     // 如果用户手动输入，也触发搜索
     if (currentValue && currentValue !== value) {

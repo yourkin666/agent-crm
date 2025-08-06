@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  Modal, Form, Input, Select, Row, Col, InputNumber, message, DatePicker
+  Modal, Form, Input, Select, Row, Col, InputNumber, message, DatePicker, Spin
 } from 'antd';
 import dayjs from 'dayjs';
 import { Customer } from '@/types';
@@ -23,9 +23,90 @@ interface AddViewingModalProps {
   onSuccess: () => void;
 }
 
+interface DetailAddressOption {
+  value: string;
+  label: string;
+  data: any; // 保存完整的详细地址数据
+}
+
 export default function AddViewingModal({ visible, customer, onCancel, onSuccess }: AddViewingModalProps) {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [detailAddressOptions, setDetailAddressOptions] = useState<DetailAddressOption[]>([]);
+  const [detailAddressLoading, setDetailAddressLoading] = useState(false);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
+
+  // 获取详细地址列表
+  const fetchDetailAddresses = useCallback(async (propertyAddrId: number) => {
+    if (!propertyAddrId) return;
+
+    setDetailAddressLoading(true);
+    try {
+      console.log('获取详细地址，propertyAddrId:', propertyAddrId);
+      const response = await fetch(`/api/property/${propertyAddrId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // 处理返回的数据
+        let detailAddressList = [];
+        if (result.success && result.data) {
+          // 如果是外部接口成功返回的数据
+          if (result.data.code === 200 && Array.isArray(result.data.data)) {
+            detailAddressList = result.data.data;
+          }
+          // 如果是模拟数据
+          else if (result.isMockData && Array.isArray(result.data.data)) {
+            detailAddressList = result.data.data;
+            console.log('使用模拟详细地址数据');
+          }
+        }
+
+        const addressOptions: DetailAddressOption[] = detailAddressList.map((item: any) => ({
+          value: item.detailAddr,
+          label: item.detailAddr,
+          data: item, // 保存完整数据
+        }));
+
+        console.log('详细地址数据加载成功:', addressOptions.length, '条记录');
+        setDetailAddressOptions(addressOptions);
+        
+        // 清空之前选择的详细地址
+        form.setFieldsValue({ property_address: undefined });
+      } else {
+        console.error('获取详细地址数据失败:', response.statusText);
+        message.error('获取详细地址失败');
+        setDetailAddressOptions([]);
+      }
+    } catch (error) {
+      console.error('获取详细地址接口调用失败:', error);
+      message.error('获取详细地址失败');
+      setDetailAddressOptions([]);
+    } finally {
+      setDetailAddressLoading(false);
+    }
+  }, [form]);
+
+  // 处理物业地址选择变化
+  const handlePropertyChange = useCallback((value: string, selectedOption?: any) => {
+    console.log('物业地址变化:', value, selectedOption);
+    
+    if (selectedOption && selectedOption.id) {
+      setSelectedPropertyId(selectedOption.id);
+      // 获取对应的详细地址
+      fetchDetailAddresses(selectedOption.id);
+    } else {
+      // 手动输入或清空时，清除详细地址选项
+      setSelectedPropertyId(null);
+      setDetailAddressOptions([]);
+      form.setFieldsValue({ property_address: undefined });
+    }
+  }, [fetchDetailAddresses, form]);
 
   const handleSubmit = async (values: any) => {
     if (!customer) return;
@@ -64,6 +145,10 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
 
   const handleCancel = () => {
     form.resetFields();
+    // 清理状态
+    setDetailAddressOptions([]);
+    setSelectedPropertyId(null);
+    setDetailAddressLoading(false);
     onCancel();
   };
 
@@ -110,7 +195,10 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
               name="property_name"
               label="物业地址"
             >
-              <CommunityAutoComplete placeholder="请输入物业地址进行搜索" />
+              <CommunityAutoComplete 
+                placeholder="请输入物业地址进行搜索" 
+                onChange={handlePropertyChange}
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -119,7 +207,21 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
           name="property_address"
           label="详细地址"
         >
-          <Input placeholder="请输入详细地址" />
+          <Select
+            placeholder={selectedPropertyId ? "请选择详细地址" : "请先选择物业地址"}
+            options={detailAddressOptions}
+            loading={detailAddressLoading}
+            disabled={!selectedPropertyId}
+            allowClear
+            showSearch
+            filterOption={(input, option) =>
+              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+            }
+            notFoundContent={
+              detailAddressLoading ? <Spin size="small" /> : 
+              selectedPropertyId ? '暂无详细地址数据' : '请先选择物业地址'
+            }
+          />
         </Form.Item>
 
         <Row gutter={16}>
