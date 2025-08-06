@@ -300,7 +300,7 @@ export default function CustomersPage() {
             width: 120,
             render: (_, record) => (
                 <span className="entry-info">
-                    {record.is_agent ? '[人工]' : '[agent]'} {record.creator}
+                    {record.is_agent ? '[人工]' : '[agent]'} {record.creator === '外部Agent系统' ? 'Agent' : record.creator}
                 </span>
             ),
         },

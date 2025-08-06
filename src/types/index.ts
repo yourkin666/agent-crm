@@ -85,6 +85,7 @@ export enum LeasePeriod {
 export interface Customer {
   id: number;
   name: string;                    // 租客姓名
+  nickname?: string;               // 客户昵称
   phone: string;                   // 主手机号
   backup_phone?: string;           // 备用手机
   wechat?: string;                 // 微信
@@ -99,6 +100,8 @@ export interface Customer {
   price_min?: number;              // 最低价格
   price_max?: number;              // 最高价格
   source_channel: SourceChannel;   // 来源渠道
+  userId?: string;                 // 用户第三方账号ID
+  botId?: string;                  // 用户聊的工作人员账号ID
   creator: string;                 // 录入人
   is_agent: boolean;               // 是否为人工录入
   internal_notes?: string;         // 内部备注（最多300字）
@@ -111,15 +114,39 @@ export interface Customer {
 // 带看记录接口
 export interface ViewingRecord {
   id: number;
-  customer_id: number;             // 客户ID
-  business_type: BusinessType;     // 业务类型
-  room_type: RoomType;             // 房型
-  room_tag?: RoomTag;              // 房型标签
-  viewer_name: ViewerType;         // 带看人
-  viewing_status: ViewingStatus;   // 带看状态
-  viewing_feedback?: ViewingFeedback; // 带看反馈
-  commission: number;              // 佣金
+  customer_id?: number;            // 客户ID (外键，可为空)
+  viewing_time: string;            // 带看时间
+  property_name: string;           // 物业地址
+  property_address?: string;       // 详细地址
+  room_type: string;               // 带看户型
+  room_tag?: string;               // 房型标签
+  viewer_name: string;             // 带看人 (internal, external, external_sales, creator)
+  viewing_status: number;          // 带看状态 (1=待确认, 2=已确认, 3=已取消, 4=已带看)
+  commission: number;              // 带看佣金
+  viewing_feedback?: number;       // 带看反馈 (0=未成交, 1=已成交)
+  business_type: string;           // 业务类型
   notes?: string;                  // 备注
+  customer_name: string;           // 客户姓名 (历史字段，便于查询)
+  customer_phone: string;          // 客户电话 (历史字段，便于查询)
+  // 第三方系统字段
+  userId?: string;                 // 用户第三方账号ID
+  botId?: string;                  // 用户聊的工作人员账号ID
+  // 房源相关字段
+  housingId?: number;              // 房源ID
+  houseAreaId?: number;            // 区域ID
+  houseAreaName?: string;          // 区域名称
+  cityId?: number;                 // 城市ID
+  cityName?: string;               // 城市名称
+  propertyAddrId?: number;         // 物业地址ID
+  unitType?: string;               // 户型
+  longitude?: string;              // 经度
+  latitude?: string;               // 纬度
+  roomId?: number;                 // 房间ID
+  advisorId?: number;              // 顾问ID
+  advisorName?: string;            // 顾问名称
+  companyName?: string;            // 公司名称
+  companyAbbreviation?: string;    // 公司简称
+  houseTypeId?: number;            // 房型ID
   created_at: string;
   updated_at: string;
 }

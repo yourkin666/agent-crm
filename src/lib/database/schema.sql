@@ -2,6 +2,7 @@
 CREATE TABLE IF NOT EXISTS customers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT DEFAULT '',                  -- 租客姓名
+  nickname TEXT,                         -- 客户昵称
   phone TEXT UNIQUE,                     -- 主手机号 (唯一，但可为空)
   backup_phone TEXT,                     -- 备用手机
   wechat TEXT,                          -- 微信
@@ -14,6 +15,8 @@ CREATE TABLE IF NOT EXISTS customers (
   lease_period INTEGER,                 -- 租赁周期 (1-6月, 12年, 24两年, 36三年+)
   price_range TEXT,                     -- 可接受的价格 ("5000-7000")
   source_channel TEXT DEFAULT 'referral', -- 来源渠道 (xianyu, xiaohongshu, beike, 58tongcheng, shipinhao, douyin, referral)
+  userId TEXT,                          -- 用户第三方账号ID
+  botId TEXT,                           -- 用户聊的工作人员账号ID
   creator TEXT DEFAULT '系统',           -- 录入人
   is_agent BOOLEAN DEFAULT 1,          -- 是否为人工录入 (1=人工, 0=agent)
   internal_notes TEXT,                  -- 内部备注 (最多300字)
@@ -38,6 +41,27 @@ CREATE TABLE IF NOT EXISTS viewing_records (
   viewing_feedback INTEGER,               -- 带看反馈 (0=未成交, 1=已成交)
   business_type TEXT DEFAULT 'whole_rent', -- 业务类型
   notes TEXT,                             -- 备注
+  customer_name TEXT DEFAULT '',          -- 客户姓名 (历史字段，便于查询)
+  customer_phone TEXT DEFAULT '',         -- 客户电话 (历史字段，便于查询)
+  -- 第三方系统字段
+  userId TEXT,                            -- 用户第三方账号ID
+  botId TEXT,                             -- 用户聊的工作人员账号ID
+  -- 房源相关字段
+  housingId INTEGER,                      -- 房源ID
+  houseAreaId INTEGER,                    -- 区域ID
+  houseAreaName TEXT,                     -- 区域名称
+  cityId INTEGER,                         -- 城市ID
+  cityName TEXT,                          -- 城市名称
+  propertyAddrId INTEGER,                 -- 物业地址ID
+  unitType TEXT,                          -- 户型
+  longitude TEXT,                         -- 经度
+  latitude TEXT,                          -- 纬度
+  roomId INTEGER,                         -- 房间ID
+  advisorId INTEGER,                      -- 顾问ID
+  advisorName TEXT,                       -- 顾问名称
+  companyName TEXT,                       -- 公司名称
+  companyAbbreviation TEXT,               -- 公司简称
+  houseTypeId INTEGER,                    -- 房型ID
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE SET NULL
@@ -49,6 +73,8 @@ CREATE TABLE IF NOT EXISTS viewing_records (
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
 CREATE INDEX IF NOT EXISTS idx_customers_status ON customers(status);
 CREATE INDEX IF NOT EXISTS idx_customers_source_channel ON customers(source_channel);
+CREATE INDEX IF NOT EXISTS idx_customers_userId ON customers(userId);
+CREATE INDEX IF NOT EXISTS idx_customers_botId ON customers(botId);
 CREATE INDEX IF NOT EXISTS idx_customers_created_at ON customers(created_at);
 
 CREATE INDEX IF NOT EXISTS idx_viewing_records_customer_id ON viewing_records(customer_id);

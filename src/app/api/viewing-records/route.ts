@@ -1,22 +1,169 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '../../../lib/database';
-import {
-  withErrorHandler,
-  createSuccessResponse,
-  createNotFoundError,
-  createDatabaseError
-} from '../../../lib/api-error-handler';
-import { validateViewingRecordData } from '../../../lib/validation';
-import { logApiRequest, businessLogger, createRequestLogger } from '../../../lib/logger';
+import { getDatabase } from '@/lib/database';
+import { withErrorHandler, createDatabaseError, createSuccessResponse, createNotFoundError } from '@/lib/api-error-handler';
+import { createRequestLogger } from '@/lib/logger';
+import { validateViewingRecordData } from '@/lib/validation';
 
 // 生成请求ID的辅助函数
 function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+interface ViewingRecordFilterParams {
+  page?: string;
+  pageSize?: string;
+  customer_name?: string;
+  property_name?: string;
+  viewing_status?: string;
+  business_type?: string;
+  viewer_name?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
+export const GET = withErrorHandler(async (request: NextRequest) => {
+  const requestId = generateRequestId();
+  const requestLogger = createRequestLogger(requestId);
+
+  // 记录请求开始
+  requestLogger.info({
+    method: 'GET',
+    url: '/api/viewing-records',
+    userAgent: request.headers.get('user-agent'),
+    requestId
+  }, 'API请求开始 - 获取带看记录列表');
+
+  const { searchParams } = new URL(request.url);
+  
+  // 解析查询参数
+  const page = parseInt(searchParams.get('page') || '1');
+  const pageSize = parseInt(searchParams.get('pageSize') || '10');
+  const customer_name = searchParams.get('customer_name') || '';
+  const property_name = searchParams.get('property_name') || '';
+  const viewing_status = searchParams.get('viewing_status') || '';
+  const business_type = searchParams.get('business_type') || '';
+  const viewer_name = searchParams.get('viewer_name') || '';
+  const date_from = searchParams.get('date_from') || '';
+  const date_to = searchParams.get('date_to') || '';
+
+  requestLogger.debug({
+    page, pageSize, customer_name, property_name, viewing_status,
+    business_type, viewer_name, date_from, date_to, requestId
+  }, '查询参数解析完成');
+
+  try {
+    const db = await getDatabase();
+    
+    // 构建WHERE条件
+    const whereConditions: string[] = [];
+    const queryParams: any[] = [];
+
+    if (customer_name) {
+      whereConditions.push('customer_name LIKE ?');
+      queryParams.push(`%${customer_name}%`);
+    }
+
+    if (property_name) {
+      whereConditions.push('property_name LIKE ?');
+      queryParams.push(`%${property_name}%`);
+    }
+
+    if (viewing_status) {
+      whereConditions.push('viewing_status = ?');
+      queryParams.push(parseInt(viewing_status));
+    }
+
+    if (business_type) {
+      whereConditions.push('business_type = ?');
+      queryParams.push(business_type);
+    }
+
+    if (viewer_name) {
+      whereConditions.push('viewer_name = ?');
+      queryParams.push(viewer_name);
+    }
+
+    if (date_from) {
+      whereConditions.push('viewing_time >= ?');
+      queryParams.push(date_from);
+    }
+
+    if (date_to) {
+      whereConditions.push('viewing_time <= ?');
+      queryParams.push(date_to + ' 23:59:59');
+    }
+
+    const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
+
+    // 查询总数
+    const countQuery = `SELECT COUNT(*) as total FROM viewing_records ${whereClause}`;
+    const countResult = await db.get(countQuery, queryParams);
+    const total = countResult.total;
+
+    // 计算分页
+    const offset = (page - 1) * pageSize;
+
+    // 查询数据
+    const dataQuery = `
+      SELECT 
+        id,
+        customer_id,
+        viewing_time,
+        property_name,
+        property_address,
+        room_type,
+        room_tag,
+        viewer_name,
+        viewing_status,
+        commission,
+        viewing_feedback,
+        business_type,
+        notes,
+        customer_name,
+        customer_phone,
+        created_at,
+        updated_at
+      FROM viewing_records 
+      ${whereClause}
+      ORDER BY viewing_time DESC, created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    const dataParams = [...queryParams, pageSize, offset];
+    const records = await db.all(dataQuery, dataParams);
+
+    requestLogger.info({
+      total,
+      returnedCount: records.length,
+      page,
+      pageSize,
+      requestId
+    }, '带看记录查询完成');
+
+         return NextResponse.json({
+       success: true,
+       data: {
+         data: records,
+         total,
+         page,
+         pageSize,
+         totalPages: Math.ceil(total / pageSize)
+       }
+     });
+
+  } catch (error) {
+    requestLogger.error({
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined,
+      requestId
+    }, '带看记录查询失败');
+
+         throw createDatabaseError('获取带看记录列表', error as Error);
+   }
+});
+
 export const POST = withErrorHandler(async (request: NextRequest) => {
   const requestId = generateRequestId();
-  const startTime = Date.now();
   const requestLogger = createRequestLogger(requestId);
 
   // 记录请求开始
@@ -66,11 +213,11 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   try {
     const db = await getDatabase();
 
-    // 如果提供了客户ID，检查客户是否存在
+    // 如果提供了客户ID，检查客户是否存在并获取客户信息
     let customerInfo = null;
     if (customer_id) {
       const customer = await db.get(
-        'SELECT id, name FROM customers WHERE id = ?',
+        'SELECT id, name, phone FROM customers WHERE id = ?',
         [customer_id]
       );
 
@@ -103,8 +250,9 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       INSERT INTO viewing_records (
         customer_id, viewing_time, property_name, property_address,
         room_type, room_tag, viewer_name, 
-        viewing_status, commission, viewing_feedback, business_type, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        viewing_status, commission, viewing_feedback, business_type, notes,
+        customer_name, customer_phone
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       customer_id || null,                         // 允许为空
       viewing_time || new Date().toISOString(),    // 默认为当前时间
@@ -117,7 +265,9 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       commission,
       viewing_feedback || null,
       business_type || 'whole_rent',               // 默认业务类型
-      notes || null
+      notes || null,
+      customerInfo?.name || '',                    // 客户姓名快照
+      customerInfo?.phone || ''                    // 客户电话快照
     ]);
 
     if (result.lastID && customer_id) {
@@ -143,29 +293,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       }, '客户统计信息更新完成');
     }
 
-    const duration = Date.now() - startTime;
-
     // 记录业务操作成功
     if (result.lastID) {
-      businessLogger.viewing('created', result.lastID.toString(), {
-        requestId,
-        customer_id,
-        customerName: customerInfo?.name,
-        property_name: property_name || '未填写楼盘',
-        property_address,
-        viewer_name: viewer_name || 'internal',
-        viewing_status,
-        commission,
-        business_type: business_type || 'whole_rent',
-        duration
-      });
-
-      // 记录API请求完成
-      logApiRequest('POST', '/api/viewing-records', 201, duration);
-
       requestLogger.info({
         statusCode: 201,
-        duration,
         viewingRecordId: result.lastID,
         customer_id,
         customerName: customerInfo?.name,
@@ -180,15 +311,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         201
       );
     }
+
   } catch (error) {
-    const duration = Date.now() - startTime;
-
-    // 记录API请求失败
-    logApiRequest('POST', '/api/viewing-records', 500, duration, error as Error);
-
     requestLogger.error({
       error: error instanceof Error ? error.message : error,
-      duration,
       customer_id,
       requestId
     }, 'API请求失败 - 带看记录创建失败');
