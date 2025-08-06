@@ -52,47 +52,9 @@ export async function GET(
       ORDER BY vr.viewing_time DESC, vr.created_at DESC
     `, [customerId]);
 
-    // 获取该客户的所有预约记录（包括未转化的）
-    const appointmentRecords = await db.all(`
-      SELECT 
-        'appointment' as source_type,
-        a.id + 20000 as id,
-        ? as customer_id,
-        a.appointment_time as viewing_time,
-        a.property_name,
-        a.property_address,
-        'unknown' as room_type,
-        'unknown' as room_tag,
-        a.agent_name as viewer_name,
-        CASE 
-          WHEN a.status = 4 THEN 4  -- 已完成
-          WHEN a.status = 3 THEN 3  -- 已取消
-          WHEN a.status = 2 THEN 2  -- 已确认
-          ELSE 1  -- 待确认
-        END as viewing_status,
-        0 as commission,
-        0 as viewing_feedback,
-        a.type as business_type,
-        CASE 
-          WHEN a.is_converted = 1 THEN '从预约"' || a.property_name || '"转化而来'
-          ELSE '预约记录："' || a.property_name || '"'
-        END as notes,
-        'appointment' as source_channel,
-        a.created_at,
-        a.updated_at,
-        a.customer_name
-      FROM appointments a
-      WHERE a.customer_phone = ?
-      ORDER BY a.appointment_time DESC
-    `, [customerId, customer.phone]);
-
-    // 合并两个数组并按带看时间排序
-    const allRecords = [...directViewingRecords, ...appointmentRecords];
-    allRecords.sort((a, b) => new Date(b.viewing_time).getTime() - new Date(a.viewing_time).getTime());
-
     return NextResponse.json({
       success: true,
-      data: allRecords
+      data: directViewingRecords
     });
 
   } catch (error) {

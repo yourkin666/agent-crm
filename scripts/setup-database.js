@@ -99,25 +99,7 @@ async function setupDatabase() {
 
     await stmt.finalize();
 
-    // 插入示例预约带看数据
-    const insertAppointmentSQL = `
-      INSERT INTO appointments (
-        property_name, property_address, customer_name, customer_phone, 
-        agent_name, appointment_time, status, type, city, is_converted
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
 
-    const sampleAppointments = [
-      ['华润城', '深圳市南山区华润城3期A座1201', '陈八', '13800138006', '李管家', '2024-01-25 14:00:00', 2, 'whole_rent', '深圳', 0],
-      ['金地威新', '深圳市福田区金地威新花园2栋501', '周九', '13800138007', '王管家', '2024-01-26 10:30:00', 1, 'shared_rent', '深圳', 0],
-      ['龙湖春江悦茗', '深圳市宝安区龙湖春江悦茗1期B座888', '吴十', '13800138008', '赵管家', '2024-01-26 16:00:00', 4, 'centralized', '深圳', 1],
-      ['万科云城', '深圳市龙岗区万科云城二期C座1888', '郑十一', '13800138009', '李管家', '2024-01-27 09:00:00', 3, 'whole_rent', '深圳', 0],
-      ['保利天汇', '深圳市南山区保利天汇3座2101', '孙十二', '13800138010', '王管家', '2024-01-28 15:30:00', 5, 'shared_rent', '深圳', 0],
-    ];
-
-    for (const appointment of sampleAppointments) {
-      await db.run(insertAppointmentSQL, appointment);
-    }
 
     // 更新客户的统计数据（佣金总和、带看次数）
     await db.exec(`

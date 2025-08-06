@@ -280,20 +280,7 @@ export const businessLogger = {
     );
   },
 
-  /**
-   * 记录预约相关操作
-   */
-  appointment: (action: string, appointmentId?: string, data?: any) => {
-    logger.info(
-      {
-        business: 'appointment',
-        action,
-        appointmentId,
-        data,
-      },
-      `Appointment ${action}`
-    );
-  },
+
 
   /**
    * 记录带看相关操作
@@ -520,12 +507,7 @@ export const simpleBusinessLogger = {
   /**
    * 记录预约相关操作
    */
-  appointment: (action: string, requestId: string, data: any) => {
-    businessLogger.appointment(action, data.appointmentId?.toString(), {
-      requestId,
-      ...data
-    });
-  },
+
 
   /**
    * 记录带看相关操作

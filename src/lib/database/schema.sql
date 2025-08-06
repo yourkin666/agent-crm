@@ -43,22 +43,7 @@ CREATE TABLE IF NOT EXISTS viewing_records (
   FOREIGN KEY (customer_id) REFERENCES customers (id) ON DELETE SET NULL
 );
 
--- 预约带看表
-CREATE TABLE IF NOT EXISTS appointments (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  property_name TEXT DEFAULT '未填写',      -- 物业名称
-  property_address TEXT,                   -- 房间地址
-  customer_name TEXT DEFAULT '未填写',      -- 客户姓名
-  customer_phone TEXT,                     -- 客户电话
-  agent_name TEXT DEFAULT '未填写',         -- 经纪人
-  appointment_time DATETIME,               -- 预约时间
-  status INTEGER DEFAULT 1,               -- 状态 (1=待确认, 2=已确认, 3=进行中, 4=已完成, 5=已取消)
-  type TEXT DEFAULT 'whole_rent',         -- 类型 (whole_rent, centralized, shared_rent)
-  city TEXT,                              -- 城市
-  is_converted BOOLEAN DEFAULT 0,         -- 是否已转化为带看记录
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+
 
 -- 创建索引
 CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
@@ -70,11 +55,7 @@ CREATE INDEX IF NOT EXISTS idx_viewing_records_customer_id ON viewing_records(cu
 CREATE INDEX IF NOT EXISTS idx_viewing_records_status ON viewing_records(viewing_status);
 CREATE INDEX IF NOT EXISTS idx_viewing_records_created_at ON viewing_records(created_at);
 
-CREATE INDEX IF NOT EXISTS idx_appointments_customer_phone ON appointments(customer_phone);
-CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
-CREATE INDEX IF NOT EXISTS idx_appointments_appointment_time ON appointments(appointment_time);
-CREATE INDEX IF NOT EXISTS idx_appointments_city ON appointments(city);
-CREATE INDEX IF NOT EXISTS idx_appointments_is_converted ON appointments(is_converted);
+
 
 -- 创建触发器：自动更新 updated_at 字段
 CREATE TRIGGER IF NOT EXISTS update_customers_updated_at 
@@ -89,8 +70,4 @@ CREATE TRIGGER IF NOT EXISTS update_viewing_records_updated_at
     UPDATE viewing_records SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
   END;
 
-CREATE TRIGGER IF NOT EXISTS update_appointments_updated_at 
-  AFTER UPDATE ON appointments
-  BEGIN
-    UPDATE appointments SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-  END; 
+ 

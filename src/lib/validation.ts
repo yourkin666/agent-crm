@@ -67,37 +67,7 @@ export function validateCustomerData(data: any): void {
   }
 }
 
-/**
- * 验证预约数据
- */
-export function validateAppointmentData(data: any): void {
-  // 验证客户手机号格式（如果提供）
-  if (data.customer_phone) {
-    validatePhoneNumber(data.customer_phone);
-  }
-  
-  // 验证状态值（如果提供）
-  if (data.status !== undefined) {
-    validateNumberRange(data.status, 1, 5, '预约状态');
-  }
-  
-  // 验证字段长度（如果提供）
-  if (data.property_name) {
-    validateStringLength(data.property_name, 100, '物业名称');
-  }
-  if (data.property_address) {
-    validateStringLength(data.property_address, 200, '房间地址');
-  }
-  if (data.customer_name) {
-    validateStringLength(data.customer_name, 50, '客户姓名');
-  }
-  if (data.agent_name) {
-    validateStringLength(data.agent_name, 50, '经纪人');
-  }
-  if (data.city) {
-    validateStringLength(data.city, 50, '城市');
-  }
-}
+
 
 /**
  * 验证带看记录数据

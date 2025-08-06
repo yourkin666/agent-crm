@@ -1,6 +1,6 @@
 import { 
   CustomerStatus, SourceChannel, BusinessType, RoomType, RoomTag,
-  ViewerType, ViewingStatus, ViewingFeedback, AppointmentStatus, LeasePeriod
+  ViewerType, ViewingStatus, ViewingFeedback, LeasePeriod
 } from '@/types';
 
 // 客户状态显示文本
@@ -139,23 +139,7 @@ export const VIEWING_FEEDBACK_COLOR = {
   [ViewingFeedback.DEAL]: 'green',
 };
 
-// 预约带看状态显示文本
-export const APPOINTMENT_STATUS_TEXT = {
-  [AppointmentStatus.PENDING]: '待确认',
-  [AppointmentStatus.CONFIRMED]: '已确认',
-  [AppointmentStatus.IN_PROGRESS]: '进行中',
-  [AppointmentStatus.COMPLETED]: '已完成',
-  [AppointmentStatus.CANCELLED]: '已取消',
-};
 
-// 预约带看状态颜色
-export const APPOINTMENT_STATUS_COLOR = {
-  [AppointmentStatus.PENDING]: 'blue',
-  [AppointmentStatus.CONFIRMED]: 'orange',
-  [AppointmentStatus.IN_PROGRESS]: 'purple',
-  [AppointmentStatus.COMPLETED]: 'green',
-  [AppointmentStatus.CANCELLED]: 'red',
-};
 
 // 租赁周期显示文本
 export const LEASE_PERIOD_TEXT = {

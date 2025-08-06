@@ -66,14 +66,7 @@ export enum ViewingFeedback {
   DEAL = 1,        // 已成交
 }
 
-// 预约带看状态枚举
-export enum AppointmentStatus {
-  PENDING = 1,      // 待确认
-  CONFIRMED = 2,    // 已确认
-  IN_PROGRESS = 3,  // 进行中
-  COMPLETED = 4,    // 已完成
-  CANCELLED = 5,    // 已取消
-}
+
 
 // 租赁周期枚举
 export enum LeasePeriod {
@@ -131,22 +124,7 @@ export interface ViewingRecord {
   updated_at: string;
 }
 
-// 预约带看接口
-export interface Appointment {
-  id: number;
-  property_name: string;           // 物业名称
-  property_address: string;        // 房间地址
-  customer_name: string;           // 客户姓名
-  customer_phone: string;          // 客户电话
-  agent_name: string;              // 经纪人
-  appointment_time: string;        // 预约时间
-  status: AppointmentStatus;       // 状态
-  type: BusinessType;              // 类型
-  city?: string;                   // 城市
-  is_converted: boolean;           // 是否已转化为带看记录
-  created_at: string;
-  updated_at: string;
-}
+
 
 // API 响应接口
 export interface ApiResponse<T = any> {
@@ -191,13 +169,4 @@ export interface CustomerFilterParams extends PaginationParams {
   my_entries?: boolean; // 我录入的
 }
 
-export interface AppointmentFilterParams extends PaginationParams {
-  customer_name?: string;
-  customer_phone?: string;
-  agent_name?: string;
-  status?: AppointmentStatus;
-  type?: BusinessType;
-  city?: string;
-  date_from?: string;
-  date_to?: string;
-} 
+ 

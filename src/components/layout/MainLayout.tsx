@@ -7,7 +7,6 @@ import {
   MenuUnfoldOutlined,
   UserOutlined,
   TeamOutlined,
-  CalendarOutlined,
   SettingOutlined,
   LogoutOutlined
 } from '@ant-design/icons';
@@ -26,11 +25,6 @@ const menuItems: MenuProps['items'] = [
     key: '/customers',
     icon: <TeamOutlined />,
     label: '客户管理',
-  },
-  {
-    key: '/appointments',
-    icon: <CalendarOutlined />,
-    label: '预约带看',
   },
 ];
 
