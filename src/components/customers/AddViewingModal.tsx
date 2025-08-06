@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import {
-  Modal, Form, Input, Select, Row, Col, InputNumber, message, DatePicker, Spin
+  Modal, Form, Input, Select, Row, Col, InputNumber, message, DatePicker, Spin, AutoComplete
 } from 'antd';
 import dayjs from 'dayjs';
 import { Customer } from '@/types';
@@ -36,7 +36,7 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
   const [detailAddressLoading, setDetailAddressLoading] = useState(false);
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
 
-  // 获取详细地址列表
+  // 获取详细地址列表并自动填充
   const fetchDetailAddresses = useCallback(async (propertyAddrId: number) => {
     if (!propertyAddrId) return;
 
@@ -56,37 +56,62 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
         // 处理返回的数据
         let detailAddressList = [];
         if (result.success && result.data) {
-          // 如果是外部接口成功返回的数据
-          if (result.data.code === 200 && Array.isArray(result.data.data)) {
-            detailAddressList = result.data.data;
+          // 如果是外部接口成功返回的数据（新分页格式）
+          if (result.data.code === 200 && result.data.data && Array.isArray(result.data.data.list)) {
+            detailAddressList = result.data.data.list;
+            console.log('使用外部接口详细地址数据（分页格式）');
           }
-          // 如果是模拟数据
+          // 如果是外部接口成功返回的数据（直接数组格式）
+          else if (result.data.code === 200 && Array.isArray(result.data.data)) {
+            detailAddressList = result.data.data;
+            console.log('使用外部接口详细地址数据（数组格式）');
+          }
+          // 如果是模拟数据（新分页格式）
+          else if (result.isMockData && result.data.data && Array.isArray(result.data.data.list)) {
+            detailAddressList = result.data.data.list;
+            console.log('使用模拟详细地址数据（分页格式）');
+          }
+          // 如果是模拟数据（直接数组格式）
           else if (result.isMockData && Array.isArray(result.data.data)) {
             detailAddressList = result.data.data;
-            console.log('使用模拟详细地址数据');
+            console.log('使用模拟详细地址数据（数组格式）');
           }
         }
 
-        const addressOptions: DetailAddressOption[] = detailAddressList.map((item: any) => ({
-          value: item.detailAddr,
-          label: item.detailAddr,
-          data: item, // 保存完整数据
-        }));
-
-        console.log('详细地址数据加载成功:', addressOptions.length, '条记录');
-        setDetailAddressOptions(addressOptions);
+        console.log('详细地址数据加载成功:', detailAddressList.length, '条记录');
         
-        // 清空之前选择的详细地址
-        form.setFieldsValue({ property_address: undefined });
+        // 自动填充详细地址 - 可以是第一个地址或者组合显示
+        if (detailAddressList.length > 0) {
+          // 自动选择第一个详细地址
+          const firstAddress = detailAddressList[0];
+          form.setFieldsValue({ 
+            property_address: firstAddress.detailAddr 
+          });
+          
+          // 创建地址选项供后续可能的手动修改
+          const addressOptions: DetailAddressOption[] = detailAddressList.map((item: any) => ({
+            value: item.detailAddr,
+            label: item.detailAddr,
+            data: item,
+          }));
+          setDetailAddressOptions(addressOptions);
+          
+          console.log('已自动填充详细地址:', firstAddress.detailAddr);
+        } else {
+          form.setFieldsValue({ property_address: '暂无详细地址信息' });
+          setDetailAddressOptions([]);
+        }
       } else {
         console.error('获取详细地址数据失败:', response.statusText);
         message.error('获取详细地址失败');
         setDetailAddressOptions([]);
+        form.setFieldsValue({ property_address: undefined });
       }
     } catch (error) {
       console.error('获取详细地址接口调用失败:', error);
       message.error('获取详细地址失败');
       setDetailAddressOptions([]);
+      form.setFieldsValue({ property_address: undefined });
     } finally {
       setDetailAddressLoading(false);
     }
@@ -96,10 +121,10 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
   const handlePropertyChange = useCallback((value: string, selectedOption?: any) => {
     console.log('物业地址变化:', value, selectedOption);
     
-    if (selectedOption && selectedOption.id) {
-      setSelectedPropertyId(selectedOption.id);
+    if (selectedOption && selectedOption.propertyAddrId) {
+      setSelectedPropertyId(selectedOption.propertyAddrId);
       // 获取对应的详细地址
-      fetchDetailAddresses(selectedOption.id);
+      fetchDetailAddresses(selectedOption.propertyAddrId);
     } else {
       // 手动输入或清空时，清除详细地址选项
       setSelectedPropertyId(null);
@@ -207,13 +232,11 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
           name="property_address"
           label="详细地址"
         >
-          <Select
-            placeholder={selectedPropertyId ? "请选择详细地址" : "请先选择物业地址"}
+          <AutoComplete
+            placeholder={selectedPropertyId ? "已自动填充详细地址，可手动修改" : "请先选择物业地址"}
             options={detailAddressOptions}
-            loading={detailAddressLoading}
             disabled={!selectedPropertyId}
             allowClear
-            showSearch
             filterOption={(input, option) =>
               (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
             }

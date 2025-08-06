@@ -6,7 +6,7 @@ import { AutoComplete, Spin } from 'antd';
 interface CommunityOption {
   value: string;
   label: string;
-  id: number; // 添加ID字段
+  propertyAddrId: number; // 修改为propertyAddrId字段
 }
 
 interface CommunityAutoCompleteProps {
@@ -23,13 +23,18 @@ export default function CommunityAutoComplete({
   style
 }: CommunityAutoCompleteProps) {
   const [options, setOptions] = useState<CommunityOption[]>([]);
-  const [allCommunities, setAllCommunities] = useState<CommunityOption[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 获取所有小区数据
-  const fetchAllCommunities = async () => {
+  // 根据关键词搜索物业地址
+  const fetchPropertyAddresses = async (keyword: string) => {
+    if (!keyword.trim()) {
+      setOptions([]);
+      return;
+    }
+
+    setLoading(true);
     try {
-      const response = await fetch('/api/property', {
+      const response = await fetch(`/api/housing/property-addresses?keyword=${encodeURIComponent(keyword)}&limit=20`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -40,40 +45,39 @@ export default function CommunityAutoComplete({
         const result = await response.json();
         
         // 处理代理API返回的数据
-        let communityList = [];
+        let propertyList = [];
         if (result.success && result.data) {
           // 如果是外部接口成功返回的数据
-          if (result.data.code === "200" && Array.isArray(result.data.data)) {
-            communityList = result.data.data;
+          if (result.data.code === 200 && Array.isArray(result.data.data)) {
+            propertyList = result.data.data;
           }
           // 如果是模拟数据
           else if (result.isMockData && Array.isArray(result.data.data)) {
-            communityList = result.data.data;
-            console.log('使用模拟小区数据');
+            propertyList = result.data.data;
+            console.log('使用模拟物业地址数据');
           }
         }
 
-        const communityOptions: CommunityOption[] = communityList.map((item: any) => ({
-          // 接口返回的字段是 id 和 addrName
-          value: item.addrName,
-          label: item.addrName,
-          id: item.id, // 保存ID
+        const propertyOptions: CommunityOption[] = propertyList.map((item: any) => ({
+          // 接口返回的字段是 propertyAddrId 和 propertyAddr
+          value: item.propertyAddr,
+          label: item.propertyAddr,
+          propertyAddrId: item.propertyAddrId,
         }));
 
-        console.log('小区数据加载成功:', communityOptions.length, '条记录');
-        setAllCommunities(communityOptions);
+        console.log('物业地址搜索成功:', propertyOptions.length, '条记录');
+        setOptions(propertyOptions);
       } else {
-        console.error('获取小区数据失败:', response.statusText);
+        console.error('获取物业地址失败:', response.statusText);
+        setOptions([]);
       }
     } catch (error) {
-      console.error('获取小区数据接口调用失败:', error);
+      console.error('物业地址搜索接口调用失败:', error);
+      setOptions([]);
+    } finally {
+      setLoading(false);
     }
   };
-
-  // 在组件加载时获取所有数据
-  React.useEffect(() => {
-    fetchAllCommunities();
-  }, []);
 
   // 使用防抖优化接口调用
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -87,25 +91,9 @@ export default function CommunityAutoComplete({
     
     // 设置新的定时器
     debounceTimer.current = setTimeout(() => {
-      console.log('执行搜索，关键字:', searchText, '总数据量:', allCommunities.length);
-      
-      if (!searchText.trim()) {
-        setOptions([]);
-        return;
-      }
-
-      setLoading(true);
-      
-      // 在本地数据中搜索匹配的小区
-      const filteredOptions = allCommunities.filter(community =>
-        community.label.toLowerCase().includes(searchText.toLowerCase())
-      );
-
-      console.log('搜索结果:', filteredOptions.length, '条匹配记录');
-      setOptions(filteredOptions.slice(0, 10)); // 限制显示最多10个结果
-      setLoading(false);
+      fetchPropertyAddresses(searchText);
     }, 300);
-  }, [allCommunities]);
+  }, []);
 
   const handleSelect = (selectedValue: string) => {
     console.log('AutoComplete 选择值:', selectedValue);
