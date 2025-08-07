@@ -441,7 +441,7 @@ export default function CustomersPage() {
                         <div className="filter-row">
                             <Form.Item name="searchText" className="w-64">
                                 <Input 
-                                    placeholder="输入客户姓名、昵称、电话后按回车搜索" 
+                                    placeholder="输入客户姓名、昵称、电话" 
                                     allowClear 
                                     onPressEnter={() => form.submit()}
                                     prefix={<SearchOutlined className="text-gray-400" />}
@@ -498,9 +498,6 @@ export default function CustomersPage() {
                                     )}
                                 </Space>
                             </Form.Item>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-2 ml-1">
-                            💡 智能识别：输入11位手机号自动按手机号搜索，否则按姓名搜索（支持主手机号和备用手机号）
                         </div>
                     </Form>
                 </Card>
