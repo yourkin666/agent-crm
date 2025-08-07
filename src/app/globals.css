@@ -51,7 +51,7 @@
 
 /* 紧凑型页面标题样式 */
 .page-header-compact {
-  @apply mb-1 bg-white p-1.5 rounded-xl shadow-sm border border-gray-100;
+  @apply mb-0.5 bg-white p-1.5 rounded-xl shadow-sm border border-gray-100;
 }
 
 .page-title-compact {
@@ -172,15 +172,15 @@
 }
 
 .filter-panel {
-  @apply mb-2 bg-white rounded-xl shadow-sm border border-gray-100;
+  @apply mb-1 bg-white rounded-xl shadow-sm border border-gray-100;
 }
 
 .filter-panel .ant-card-body {
-  @apply p-3;
+  @apply p-2;
 }
 
 .stats-panel {
-  @apply mb-2 -mt-3;
+  @apply mb-1 -mt-2;
 }
 
 /* 统计卡片增强样式 */

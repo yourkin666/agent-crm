@@ -153,11 +153,14 @@ function validateExternalViewingData(data: any): void {
 
 // 从带看记录数据中提取客户信息
 function extractCustomerDataFromViewing(viewingData: any) {
+  // 确保客户姓名不为空，使用fallback值
+  const customerName = viewingData.customer_name || `用户${viewingData.userId}`;
+  
   return {
     userId: viewingData.userId,
     botId: viewingData.botId || null,
-    nickname: viewingData.customer_name || null, // 使用customer_name作为nickname
-    name: viewingData.customer_name || null,
+    nickname: viewingData.customer_name || null, // 使用原始customer_name作为nickname，可以为空
+    name: customerName, // 确保name字段不为空
     phone: viewingData.customer_phone || null,
     community: viewingData.property_name || null, // 将物业地址作为咨询小区
     business_type: viewingData.business_type || 'whole_rent',
@@ -266,35 +269,68 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       // 从带看数据中提取客户信息进行更新
       const customerUpdateData = extractCustomerDataFromViewing(body);
 
-      await dbManager.execute(`
-        UPDATE qft_ai_customers SET 
-          botId = COALESCE(?, botId),
-          nickname = COALESCE(?, nickname),
-          name = COALESCE(?, name),
-          phone = COALESCE(?, phone),
-          community = COALESCE(?, community),
-          business_type = COALESCE(?, business_type),
-          room_type = COALESCE(?, room_type),
-          room_tags = COALESCE(?, room_tags),
-          source_channel = COALESCE(?, source_channel),
-          creator = COALESCE(?, creator),
-          internal_notes = COALESCE(?, internal_notes),
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `, [
-        customerUpdateData.botId,
-        customerUpdateData.nickname,
-        customerUpdateData.name,
-        customerUpdateData.phone,
-        customerUpdateData.community,
-        customerUpdateData.business_type,
-        customerUpdateData.room_type,
-        customerUpdateData.room_tags,
-        customerUpdateData.source_channel,
-        customerUpdateData.creator,
-        customerUpdateData.internal_notes,
-        customerId
-      ]);
+      // 构建更新SQL，避免手机号冲突
+      const updateFields = [];
+      const updateValues = [];
+      
+      // 非唯一性字段，安全更新
+      if (customerUpdateData.botId !== null) {
+        updateFields.push('botId = COALESCE(?, botId)');
+        updateValues.push(customerUpdateData.botId);
+      }
+      if (customerUpdateData.nickname !== null) {
+        updateFields.push('nickname = COALESCE(?, nickname)');
+        updateValues.push(customerUpdateData.nickname);
+      }
+      if (customerUpdateData.name !== null) {
+        updateFields.push('name = COALESCE(?, name)');
+        updateValues.push(customerUpdateData.name);
+      }
+      if (customerUpdateData.community !== null) {
+        updateFields.push('community = COALESCE(?, community)');
+        updateValues.push(customerUpdateData.community);
+      }
+      if (customerUpdateData.business_type !== null) {
+        updateFields.push('business_type = COALESCE(?, business_type)');
+        updateValues.push(customerUpdateData.business_type);
+      }
+      if (customerUpdateData.room_type !== null) {
+        updateFields.push('room_type = COALESCE(?, room_type)');
+        updateValues.push(customerUpdateData.room_type);
+      }
+      if (customerUpdateData.room_tags !== null) {
+        updateFields.push('room_tags = COALESCE(?, room_tags)');
+        updateValues.push(customerUpdateData.room_tags);
+      }
+      if (customerUpdateData.source_channel !== null) {
+        updateFields.push('source_channel = COALESCE(?, source_channel)');
+        updateValues.push(customerUpdateData.source_channel);
+      }
+      if (customerUpdateData.creator !== null) {
+        updateFields.push('creator = COALESCE(?, creator)');
+        updateValues.push(customerUpdateData.creator);
+      }
+      if (customerUpdateData.internal_notes !== null) {
+        updateFields.push('internal_notes = COALESCE(?, internal_notes)');
+        updateValues.push(customerUpdateData.internal_notes);
+      }
+      
+      // 手机号只在现有客户没有手机号的情况下才更新
+      if (customerUpdateData.phone !== null && !existingCustomer.phone) {
+        updateFields.push('phone = ?');
+        updateValues.push(customerUpdateData.phone);
+      }
+      
+      // 总是更新更新时间
+      updateFields.push('updated_at = CURRENT_TIMESTAMP');
+      updateValues.push(customerId); // WHERE条件的参数
+      
+      if (updateFields.length > 1) { // 大于1是因为包含了updated_at
+        await dbManager.execute(`
+          UPDATE qft_ai_customers SET ${updateFields.join(', ')}
+          WHERE id = ?
+        `, updateValues);
+      }
 
       requestLogger.debug({
         customerId,
@@ -384,15 +420,6 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       }
     }
 
-    // 步骤4: 创建带看记录
-    requestLogger.debug({
-      customerId,
-      userId,
-      property_name,
-      hasExternalPropertyInfo: !!externalPropertyInfo,
-      requestId
-    }, '开始创建带看记录');
-
     // 合并外部查询的房源信息和原始传入的数据
     // 优先使用外部查询到的数据，如果没有则使用原始数据
     const finalHousingData = {
@@ -433,48 +460,163 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       requestId
     }, '房源数据合并完成');
 
-    const viewingResult = await dbManager.execute(`
-      INSERT INTO qft_ai_viewing_records (
-        customer_id, viewing_time, property_name, property_address,
-        room_type, room_tag, viewer_name, viewing_status, commission,
-        viewing_feedback, business_type, notes, customer_name, customer_phone,
-        userId, botId, housingId, houseAreaId, houseAreaName, cityId, cityName,
-        propertyAddrId, unitType, longitude, latitude, roomId, advisorId,
-        advisorName, companyName, companyAbbreviation, houseTypeId
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [
-      customerId,
-      viewing_time ? new Date(viewing_time).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' '),
-      property_name,
-      property_address || null,
-      room_type,
-      room_tag || null,
-      viewer_name,
-      viewing_status,
-      commission,
-      viewing_feedback || null,
-      business_type,
-      notes || null,
-      customer_name || '',
-      customer_phone || '',
-      userId,
-      botId || null,
-      finalHousingData.housingId || null,
-      finalHousingData.houseAreaId || null,
-      finalHousingData.houseAreaName || null,
-      finalHousingData.cityId || null,
-      finalHousingData.cityName || null,
-      finalHousingData.propertyAddrId || null,
-      finalHousingData.unitType || null,
-      finalHousingData.longitude || null,
-      finalHousingData.latitude || null,
-      finalHousingData.roomId || null,
-      finalHousingData.advisorId || null,
-      finalHousingData.advisorName || null,
-      finalHousingData.companyName || null,
-      finalHousingData.companyAbbreviation || null,
-      finalHousingData.houseTypeId || null
-    ]);
+    // 步骤4: 检查带看记录是否已存在 (userId + property_address 组合)
+    let existingViewingRecord = null;
+    let viewingRecordAction = 'created';
+    
+    // 查询现有记录（使用 userId 和 property_address 组合）
+    if (property_address) {
+      existingViewingRecord = await dbManager.queryOne(
+        'SELECT id, customer_id FROM qft_ai_viewing_records WHERE userId = ? AND property_address = ?',
+        [userId, property_address]
+      );
+    } else {
+      // 如果没有详细地址，则使用 userId + property_name 组合查找
+      existingViewingRecord = await dbManager.queryOne(
+        'SELECT id, customer_id FROM qft_ai_viewing_records WHERE userId = ? AND property_name = ? AND property_address IS NULL',
+        [userId, property_name]
+      );
+    }
+
+    let viewingResult;
+    if (existingViewingRecord) {
+      // 步骤4a: 更新现有带看记录
+      viewingRecordAction = 'updated';
+      
+      requestLogger.info({
+        existingViewingRecordId: existingViewingRecord.id,
+        userId,
+        property_name,
+        property_address,
+        requestId
+      }, '发现重复带看记录，将更新现有记录');
+
+      await dbManager.execute(`
+        UPDATE qft_ai_viewing_records SET
+          customer_id = ?,
+          viewing_time = ?,
+          property_name = ?,
+          property_address = ?,
+          room_type = ?,
+          room_tag = ?,
+          viewer_name = ?,
+          viewing_status = ?,
+          commission = ?,
+          viewing_feedback = ?,
+          business_type = ?,
+          notes = ?,
+          customer_name = ?,
+          customer_phone = ?,
+          botId = ?,
+          housingId = ?,
+          houseAreaId = ?,
+          houseAreaName = ?,
+          cityId = ?,
+          cityName = ?,
+          propertyAddrId = ?,
+          unitType = ?,
+          longitude = ?,
+          latitude = ?,
+          roomId = ?,
+          advisorId = ?,
+          advisorName = ?,
+          companyName = ?,
+          companyAbbreviation = ?,
+          houseTypeId = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `, [
+        customerId,
+        viewing_time ? new Date(viewing_time).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' '),
+        property_name,
+        property_address || null,
+        room_type,
+        room_tag || null,
+        viewer_name,
+        viewing_status,
+        commission,
+        viewing_feedback || null,
+        business_type,
+        notes || null,
+        customer_name || '',
+        customer_phone || '',
+        botId || null,
+        finalHousingData.housingId || null,
+        finalHousingData.houseAreaId || null,
+        finalHousingData.houseAreaName || null,
+        finalHousingData.cityId || null,
+        finalHousingData.cityName || null,
+        finalHousingData.propertyAddrId || null,
+        finalHousingData.unitType || null,
+        finalHousingData.longitude || null,
+        finalHousingData.latitude || null,
+        finalHousingData.roomId || null,
+        finalHousingData.advisorId || null,
+        finalHousingData.advisorName || null,
+        finalHousingData.companyName || null,
+        finalHousingData.companyAbbreviation || null,
+        finalHousingData.houseTypeId || null,
+        existingViewingRecord.id
+      ]);
+
+      // 模拟 INSERT 结果的结构，用于后续处理
+      viewingResult = {
+        lastInsertRowid: existingViewingRecord.id
+      };
+
+    } else {
+      // 步骤4b: 创建新的带看记录
+      requestLogger.debug({
+        customerId,
+        userId,
+        property_name,
+        hasExternalPropertyInfo: !!externalPropertyInfo,
+        requestId
+      }, '开始创建新的带看记录');
+
+      viewingResult = await dbManager.execute(`
+        INSERT INTO qft_ai_viewing_records (
+          customer_id, viewing_time, property_name, property_address,
+          room_type, room_tag, viewer_name, viewing_status, commission,
+          viewing_feedback, business_type, notes, customer_name, customer_phone,
+          userId, botId, housingId, houseAreaId, houseAreaName, cityId, cityName,
+          propertyAddrId, unitType, longitude, latitude, roomId, advisorId,
+          advisorName, companyName, companyAbbreviation, houseTypeId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        customerId,
+        viewing_time ? new Date(viewing_time).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' '),
+        property_name,
+        property_address || null,
+        room_type,
+        room_tag || null,
+        viewer_name,
+        viewing_status,
+        commission,
+        viewing_feedback || null,
+        business_type,
+        notes || null,
+        customer_name || '',
+        customer_phone || '',
+        userId,
+        botId || null,
+        finalHousingData.housingId || null,
+        finalHousingData.houseAreaId || null,
+        finalHousingData.houseAreaName || null,
+        finalHousingData.cityId || null,
+        finalHousingData.cityName || null,
+        finalHousingData.propertyAddrId || null,
+        finalHousingData.unitType || null,
+        finalHousingData.longitude || null,
+        finalHousingData.latitude || null,
+        finalHousingData.roomId || null,
+        finalHousingData.advisorId || null,
+        finalHousingData.advisorName || null,
+        finalHousingData.companyName || null,
+        finalHousingData.companyAbbreviation || null,
+        finalHousingData.houseTypeId || null
+      ]);
+    }
 
     // 步骤5: 更新客户统计信息
     if (customerId && viewingResult.lastInsertRowid) {
@@ -497,6 +639,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         customerId,
         customerAction,
         viewingRecordId: viewingResult.lastInsertRowid,
+        viewingRecordAction,
         userId,
         customer_name,
         property_name,
@@ -509,13 +652,14 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           advisorName: externalPropertyInfo.advisorName
         } : null,
         requestId
-      }, '外部API请求成功完成 - 带看记录录入成功（已自动填入外部房源信息）');
+      }, `外部API请求成功完成 - 带看记录${viewingRecordAction === 'created' ? '录入' : '更新'}成功（已自动填入外部房源信息）`);
 
               return createSuccessResponse(
           {
             viewing_record_id: viewingResult.lastInsertRowid,
           customer_id: customerId,
           customer_action: customerAction,
+          viewing_record_action: viewingRecordAction,
           userId,
           external_property_enriched: !!externalPropertyInfo,
           external_property_data: externalPropertyInfo ? {
@@ -527,7 +671,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
             companyName: externalPropertyInfo.companyName
           } : null
         },
-        `带看记录录入成功，客户${customerAction === 'created' ? '已创建' : '已更新'}${externalPropertyInfo ? '，已自动填入外部房源信息' : ''}`,
+        `带看记录${viewingRecordAction === 'created' ? '录入' : '更新'}成功，客户${customerAction === 'created' ? '已创建' : '已更新'}${externalPropertyInfo ? '，已自动填入外部房源信息' : ''}`,
         201
       );
     }

@@ -347,9 +347,9 @@ export default function ViewingRecordsPage() {
 
     return (
         <MainLayout>
-            <div style={{ padding: '24px' }}>
+            <div className="space-y-3">
                 {/* 统计卡片 */}
-                <Row gutter={16} style={{ marginBottom: 24 }}>
+                <Row gutter={16}>
                     <Col span={6}>
                         <Card>
                             <Statistic 
@@ -402,7 +402,7 @@ export default function ViewingRecordsPage() {
                 </Row>
 
                 {/* 搜索表单 */}
-                <Card title="预约带看" style={{ marginBottom: 16 }}>
+                <Card title="预约带看">
                     <Form
                         form={form}
                         layout="inline"

@@ -365,7 +365,7 @@ export default function CustomersPage() {
 
     return (
         <MainLayout>
-            <div className="content-spacing">
+            <div className="space-y-3">
                 {/* 统计卡片 */}
                 <div className="stats-panel">
                     <Row gutter={[24, 24]}>

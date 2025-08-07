@@ -14,7 +14,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     <Layout style={{ minHeight: '100vh' }}>
       <Content
         style={{
-          padding: '24px',
+          padding: '8px',
           background: '#ffffff',
           minHeight: '100vh',
           overflow: 'auto',
