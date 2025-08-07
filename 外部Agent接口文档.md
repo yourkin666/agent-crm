@@ -9,12 +9,13 @@
 
 ## 📋 接口概览
 
-本文档描述了为外部 Agent 系统提供的两个数据录入接口，用于向 CRM 系统录入客户数据和带看记录数据。
+本文档描述了为外部 Agent 系统提供的数据录入和查询接口，用于向 CRM 系统录入客户数据、带看记录数据以及查询用户的带看记录。
 
-| 接口         | 方法 | 路径                            | 功能描述                       |
-| ------------ | ---- | ------------------------------- | ------------------------------ |
-| 客户数据录入 | POST | `/api/external/customers`       | 录入或更新客户信息             |
-| 带看记录录入 | POST | `/api/external/viewing-records` | 录入带看记录并智能处理客户数据 |
+| 接口             | 方法 | 路径                                      | 功能描述                         |
+| ---------------- | ---- | ----------------------------------------- | -------------------------------- |
+| 客户数据录入     | POST | `/api/external/customers`                 | 录入或更新客户信息               |
+| 带看记录录入     | POST | `/api/external/viewing-records`           | 录入带看记录并智能处理客户数据   |
+| 用户带看记录查询 | GET  | `/api/external/viewing-records/[userId]` | 根据用户ID查询带看记录信息       |
 
 ---
 
@@ -290,6 +291,249 @@ Content-Type: application/json
 
 ---
 
+## 🔍 3. 用户带看记录查询接口
+
+### 基本信息
+
+- **接口地址**: `GET /api/external/viewing-records/[userId]`
+- **功能描述**: 根据用户ID查询该用户的所有带看记录信息
+- **支持功能**:
+  - 分页查询
+  - 多维度筛选（房源名称、带看状态、业务类型、带看人类型、时间范围）
+  - 同时返回用户基本信息（如果存在客户记录）
+- **返回格式**: JSON
+
+### 请求参数
+
+#### 路径参数
+
+| 参数名   | 类型   | 必填 | 说明                      |
+| -------- | ------ | ---- | ------------------------- |
+| `userId` | string | ✅   | 用户第三方唯一标识 ID     |
+
+#### 查询参数（URL参数）
+
+| 参数名          | 类型   | 必填 | 默认值 | 说明                                                    |
+| --------------- | ------ | ---- | ------ | ------------------------------------------------------- |
+| `page`          | number | ❌   | 1      | 页码（从1开始）                                         |
+| `pageSize`      | number | ❌   | 20     | 每页记录数（最大100）                                   |
+| `property_name` | string | ❌   | -      | 房源名称（模糊匹配）                                    |
+| `viewing_status`| number | ❌   | -      | 带看状态（1=待确认/2=已确认/3=已取消/4=已带看）         |
+| `business_type` | string | ❌   | -      | 业务类型（whole_rent/shared_rent/centralized）          |
+| `viewer_name`   | string | ❌   | -      | 带看人类型（internal/external/external_sales/creator）  |
+| `date_from`     | string | ❌   | -      | 开始时间（YYYY-MM-DD格式）                              |
+| `date_to`       | string | ❌   | -      | 结束时间（YYYY-MM-DD格式）                              |
+
+#### 请求示例
+
+```bash
+# 基础查询
+GET /api/external/viewing-records/agent_user_12345
+
+# 分页查询
+GET /api/external/viewing-records/agent_user_12345?page=2&pageSize=10
+
+# 筛选查询
+GET /api/external/viewing-records/agent_user_12345?property_name=万科城&viewing_status=4&date_from=2024-08-01&date_to=2024-08-31
+
+# 复合查询
+GET /api/external/viewing-records/agent_user_12345?business_type=whole_rent&viewer_name=external&page=1&pageSize=50
+```
+
+### 响应结果
+
+#### 成功响应
+
+```json
+{
+  "success": true,
+  "data": {
+    "viewing_records": [
+      {
+        "id": 456,
+        "customer_id": 123,
+        "viewing_time": "2024-08-15T14:00:00.000Z",
+        "property_name": "万科城",
+        "property_address": "1栋2单元301室",
+        "room_type": "two_bedroom",
+        "room_tag": "loft",
+        "viewer_name": "external",
+        "viewing_status": 4,
+        "commission": 3000.00,
+        "viewing_feedback": 1,
+        "business_type": "whole_rent",
+        "notes": "客户很满意，已签约",
+        "customer_name": "李四",
+        "customer_phone": "13900139000",
+        "userId": "agent_user_12345",
+        "botId": "bot_001",
+        // 房源扩展信息
+        "housingId": 10001,
+        "houseAreaId": 5001,
+        "houseAreaName": "南山中心区",
+        "cityId": 1,
+        "cityName": "深圳市",
+        "propertyAddrId": 12345,
+        "unitType": "两室一厅",
+        "longitude": "113.9298",
+        "latitude": "22.5309",
+        "roomId": 20001,
+        "advisorId": 3001,
+        "advisorName": "王经理",
+        "companyName": "深圳地产公司",
+        "companyAbbreviation": "深地产",
+        "houseTypeId": 101,
+        "created_at": "2024-08-15T14:30:00.000Z",
+        "updated_at": "2024-08-15T14:30:00.000Z"
+      }
+      // ... 更多记录
+    ],
+    "customer_info": {
+      "id": 123,
+      "userId": "agent_user_12345",
+      "nickname": "李四",
+      "name": "李四",
+      "phone": "13900139000",
+      "community": "万科城",
+      "business_type": "whole_rent",
+      "room_type": "two_bedroom",
+      "status": 1,
+      "source_channel": "referral",
+      "viewing_count": 5,
+      "total_commission": 15000.00,
+      "created_at": "2024-08-01T10:00:00.000Z",
+      "updated_at": "2024-08-15T14:30:00.000Z"
+    },
+    "pagination": {
+      "total": 5,
+      "page": 1,
+      "pageSize": 20,
+      "totalPages": 1
+    },
+    "userId": "agent_user_12345"
+  },
+  "message": "查询成功，找到5条带看记录"
+}
+```
+
+#### 数据字段说明
+
+##### 带看记录字段 (viewing_records)
+
+| 字段名             | 类型    | 说明                                    |
+| ------------------ | ------- | --------------------------------------- |
+| `id`               | number  | 带看记录ID                              |
+| `customer_id`      | number  | 客户ID（可能为空）                      |
+| `viewing_time`     | string  | 带看时间（ISO格式）                     |
+| `property_name`    | string  | 房源名称                                |
+| `property_address` | string  | 房源地址                                |
+| `room_type`        | string  | 房型类型                                |
+| `room_tag`         | string  | 房型标签                                |
+| `viewer_name`      | string  | 带看人类型                              |
+| `viewing_status`   | number  | 带看状态（1-4）                         |
+| `commission`       | number  | 佣金金额                                |
+| `viewing_feedback` | number  | 带看反馈（0=未成交/1=已成交）           |
+| `business_type`    | string  | 业务类型                                |
+| `notes`            | string  | 备注                                    |
+| `customer_name`    | string  | 客户姓名（历史快照）                    |
+| `customer_phone`   | string  | 客户电话（历史快照）                    |
+| `userId`           | string  | 用户第三方ID                            |
+| `botId`            | string  | 机器人/工作人员ID                       |
+| **房源扩展信息**   |         | **以下为房源详细信息（可能为空）**      |
+| `housingId`        | number  | 房源ID                                  |
+| `houseAreaId`      | number  | 区域ID                                  |
+| `houseAreaName`    | string  | 区域名称                                |
+| `cityId`           | number  | 城市ID                                  |
+| `cityName`         | string  | 城市名称                                |
+| `propertyAddrId`   | number  | 物业地址ID                              |
+| `unitType`         | string  | 户型描述                                |
+| `longitude`        | string  | 经度                                    |
+| `latitude`         | string  | 纬度                                    |
+| `roomId`           | number  | 房间ID                                  |
+| `advisorId`        | number  | 顾问ID                                  |
+| `advisorName`      | string  | 顾问姓名                                |
+| `companyName`      | string  | 公司名称                                |
+| `companyAbbreviation` | string | 公司简称                              |
+| `houseTypeId`      | number  | 房型ID                                  |
+| `created_at`       | string  | 创建时间                                |
+| `updated_at`       | string  | 更新时间                                |
+
+##### 客户信息字段 (customer_info)
+
+| 字段名            | 类型   | 说明                     |
+| ----------------- | ------ | ------------------------ |
+| `id`              | number | 客户ID                   |
+| `userId`          | string | 用户第三方ID             |
+| `nickname`        | string | 客户昵称                 |
+| `name`            | string | 客户姓名                 |
+| `phone`           | string | 客户电话                 |
+| `community`       | string | 咨询小区                 |
+| `business_type`   | string | 业务类型                 |
+| `room_type`       | string | 房型偏好                 |
+| `status`          | number | 客户状态                 |
+| `source_channel`  | string | 来源渠道                 |
+| `viewing_count`   | number | 带看次数统计             |
+| `total_commission`| number | 总佣金统计               |
+| `created_at`      | string | 客户创建时间             |
+| `updated_at`      | string | 客户更新时间             |
+
+#### 无数据响应
+
+```json
+{
+  "success": true,
+  "data": {
+    "viewing_records": [],
+    "customer_info": null,
+    "pagination": {
+      "total": 0,
+      "page": 1,
+      "pageSize": 20,
+      "totalPages": 0
+    },
+    "userId": "agent_user_12345"
+  },
+  "message": "查询成功，找到0条带看记录"
+}
+```
+
+#### 错误响应
+
+```json
+{
+  "success": false,
+  "error": "userId为必填参数",
+  "message": "请求参数验证失败"
+}
+```
+
+### curl 命令样例
+
+```bash
+# 基础查询用户所有带看记录
+curl -X GET "http://localhost:3000/api/external/viewing-records/agent_user_12345"
+
+# 分页查询
+curl -X GET "http://localhost:3000/api/external/viewing-records/agent_user_12345?page=1&pageSize=10"
+
+# 按房源名称筛选
+curl -X GET "http://localhost:3000/api/external/viewing-records/agent_user_12345?property_name=万科城"
+
+# 按带看状态筛选（查询已完成带看的记录）
+curl -X GET "http://localhost:3000/api/external/viewing-records/agent_user_12345?viewing_status=4"
+
+# 按时间范围筛选
+curl -X GET "http://localhost:3000/api/external/viewing-records/agent_user_12345?date_from=2024-08-01&date_to=2024-08-31"
+
+# 复合筛选查询
+curl -X GET "http://localhost:3000/api/external/viewing-records/agent_user_12345?business_type=whole_rent&viewing_status=4&property_name=万科&page=1&pageSize=20"
+
+# 使用jq解析响应
+curl -s -X GET "http://localhost:3000/api/external/viewing-records/agent_user_12345" | jq '.data.viewing_records | length'
+```
+
+---
+
 ## 🔧 接口使用指南
 
 ### 推荐使用流程
@@ -299,12 +543,20 @@ Content-Type: application/json
 ```
 1. POST /api/external/customers (录入客户基础信息)
 2. POST /api/external/viewing-records (录入带看记录)
+3. GET /api/external/viewing-records/[userId] (查询用户带看记录)
 ```
 
 #### 方案二：直接录入带看记录（推荐）
 
 ```
 1. POST /api/external/viewing-records (一次性处理客户和带看记录)
+2. GET /api/external/viewing-records/[userId] (查询用户带看记录)
+```
+
+#### 方案三：纯查询场景
+
+```
+1. GET /api/external/viewing-records/[userId] (查询指定用户的带看记录)
 ```
 
 ### 数据一致性保证
@@ -660,6 +912,32 @@ A: 建议使用规范的物业/小区名称，如：
 - "万科城"、"华润城"、"保利城" 等知名楼盘
 - 避免使用非正式缩写或方言名称
 - 详细地址越准确，查询匹配度越高
+
+### Q11: 用户带看记录查询接口有什么限制？
+
+A: 查询接口的限制包括：
+
+- 单次查询最多返回100条记录（pageSize最大值）
+- 支持多维度筛选，但建议合理使用以提升查询性能
+- 响应包含完整的房源信息和用户基本信息
+- 查询结果按带看时间倒序排列
+
+### Q12: 如何高效地使用用户带看记录查询接口？
+
+A: 建议的最佳实践：
+
+- **分页处理**: 对于数据量大的用户，使用合适的页面大小（建议20-50条）
+- **筛选优化**: 优先使用索引字段筛选（viewing_status、viewing_time）
+- **时间范围**: 限制查询时间范围可显著提升性能
+- **字段使用**: 响应包含完整信息，可根据需要提取相关字段
+
+### Q13: 查询接口返回的customer_info什么时候为空？
+
+A: customer_info在以下情况下可能为空：
+
+- 该userId没有对应的客户记录
+- 所有带看记录的customer_id字段都为空
+- 客户记录已被删除但带看记录保留
 
 ---
 

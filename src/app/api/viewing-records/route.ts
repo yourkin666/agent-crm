@@ -213,7 +213,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     let customerInfo = null;
     if (customer_id) {
       const customer = await dbManager.queryOne(
-        'SELECT id, name, phone FROM qft_ai_customers WHERE id = ?',
+        'SELECT id, name, phone, userId, botId FROM qft_ai_customers WHERE id = ?',
         [customer_id]
       );
 
@@ -247,8 +247,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         customer_id, viewing_time, property_name, property_address,
         room_type, room_tag, viewer_name, 
         viewing_status, commission, viewing_feedback, business_type, notes,
-        customer_name, customer_phone
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        customer_name, customer_phone, userId, botId
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       customer_id || null,                         // 允许为空
       viewing_time ? new Date(viewing_time).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' '),    // 转换为MySQL datetime格式
@@ -263,7 +263,9 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       business_type || 'whole_rent',               // 默认业务类型
       notes || null,
       customerInfo?.name || '',                    // 客户姓名快照
-      customerInfo?.phone || ''                    // 客户电话快照
+      customerInfo?.phone || '',                   // 客户电话快照
+      customerInfo?.userId || null,                // 客户第三方userId
+      customerInfo?.botId || null                  // 客户botId
     ]);
 
     if (result.lastInsertRowid && customer_id) {

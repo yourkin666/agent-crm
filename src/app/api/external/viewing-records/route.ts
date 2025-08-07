@@ -155,14 +155,14 @@ function validateExternalViewingData(data: any): void {
 function extractCustomerDataFromViewing(viewingData: any) {
   return {
     userId: viewingData.userId,
-    botId: viewingData.botId,
-    nickname: viewingData.customer_name || undefined, // 使用customer_name作为nickname
-    name: viewingData.customer_name || undefined,
-    phone: viewingData.customer_phone || undefined,
-    community: viewingData.property_name || undefined, // 将物业地址作为咨询小区
+    botId: viewingData.botId || null,
+    nickname: viewingData.customer_name || null, // 使用customer_name作为nickname
+    name: viewingData.customer_name || null,
+    phone: viewingData.customer_phone || null,
+    community: viewingData.property_name || null, // 将物业地址作为咨询小区
     business_type: viewingData.business_type || 'whole_rent',
     room_type: viewingData.room_type || 'one_bedroom',
-    room_tags: viewingData.room_tag ? JSON.stringify([viewingData.room_tag]) : undefined,
+    room_tags: viewingData.room_tag ? JSON.stringify([viewingData.room_tag]) : null,
     source_channel: 'referral', // 外部来源默认为推荐
     creator: '外部Agent系统',
     internal_notes: `由带看记录自动创建/更新。房源：${viewingData.property_name}${viewingData.property_address ? `，地址：${viewingData.property_address}` : ''}${viewingData.cityName ? `，城市：${viewingData.cityName}` : ''}${viewingData.houseAreaName ? `，区域：${viewingData.houseAreaName}` : ''}`
@@ -446,34 +446,34 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       customerId,
       viewing_time ? new Date(viewing_time).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' '),
       property_name,
-      property_address,
+      property_address || null,
       room_type,
-      room_tag,
+      room_tag || null,
       viewer_name,
       viewing_status,
       commission,
-      viewing_feedback,
+      viewing_feedback || null,
       business_type,
-      notes,
+      notes || null,
       customer_name || '',
       customer_phone || '',
       userId,
-      botId,
-      finalHousingData.housingId,
-      finalHousingData.houseAreaId,
-      finalHousingData.houseAreaName,
-      finalHousingData.cityId,
-      finalHousingData.cityName,
-      finalHousingData.propertyAddrId,
-      finalHousingData.unitType,
-      finalHousingData.longitude,
-      finalHousingData.latitude,
-      finalHousingData.roomId,
-      finalHousingData.advisorId,
-      finalHousingData.advisorName,
-      finalHousingData.companyName,
-      finalHousingData.companyAbbreviation,
-      finalHousingData.houseTypeId
+      botId || null,
+      finalHousingData.housingId || null,
+      finalHousingData.houseAreaId || null,
+      finalHousingData.houseAreaName || null,
+      finalHousingData.cityId || null,
+      finalHousingData.cityName || null,
+      finalHousingData.propertyAddrId || null,
+      finalHousingData.unitType || null,
+      finalHousingData.longitude || null,
+      finalHousingData.latitude || null,
+      finalHousingData.roomId || null,
+      finalHousingData.advisorId || null,
+      finalHousingData.advisorName || null,
+      finalHousingData.companyName || null,
+      finalHousingData.companyAbbreviation || null,
+      finalHousingData.houseTypeId || null
     ]);
 
     // 步骤5: 更新客户统计信息
