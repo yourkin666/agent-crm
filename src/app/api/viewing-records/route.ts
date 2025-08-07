@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/database';
+import { dbManager } from '@/lib/database';
 import { withErrorHandler, createDatabaseError, createSuccessResponse, createNotFoundError } from '@/lib/api-error-handler';
 import { createRequestLogger } from '@/lib/logger';
 import { validateViewingRecordData } from '@/lib/validation';
@@ -52,8 +52,6 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   }, '查询参数解析完成');
 
   try {
-    const db = await getDatabase();
-    
     // 构建WHERE条件
     const whereConditions: string[] = [];
     const queryParams: any[] = [];
@@ -96,9 +94,9 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
 
     // 查询总数
-    const countQuery = `SELECT COUNT(*) as total FROM viewing_records ${whereClause}`;
-    const countResult = await db.get(countQuery, queryParams);
-    const total = countResult.total;
+    const countQuery = `SELECT COUNT(*) as total FROM qft_ai_viewing_records ${whereClause}`;
+    const countResult = await dbManager.queryOne(countQuery, queryParams);
+    const total = countResult?.total || 0;
 
     // 计算分页
     const offset = (page - 1) * pageSize;
@@ -123,14 +121,14 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
         customer_phone,
         created_at,
         updated_at
-      FROM viewing_records 
+      FROM qft_ai_viewing_records 
       ${whereClause}
       ORDER BY viewing_time DESC, created_at DESC
       LIMIT ? OFFSET ?
     `;
 
     const dataParams = [...queryParams, pageSize, offset];
-    const records = await db.all(dataQuery, dataParams);
+    const records = await dbManager.query(dataQuery, dataParams);
 
     requestLogger.info({
       total,
@@ -211,13 +209,11 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   } = body;
 
   try {
-    const db = await getDatabase();
-
     // 如果提供了客户ID，检查客户是否存在并获取客户信息
     let customerInfo = null;
     if (customer_id) {
-      const customer = await db.get(
-        'SELECT id, name, phone FROM customers WHERE id = ?',
+      const customer = await dbManager.queryOne(
+        'SELECT id, name, phone FROM qft_ai_customers WHERE id = ?',
         [customer_id]
       );
 
@@ -246,8 +242,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     }, '开始创建带看记录');
 
     // 插入带看记录，为必填字段提供默认值
-    const result = await db.run(`
-      INSERT INTO viewing_records (
+    const result = await dbManager.execute(`
+      INSERT INTO qft_ai_viewing_records (
         customer_id, viewing_time, property_name, property_address,
         room_type, room_tag, viewer_name, 
         viewing_status, commission, viewing_feedback, business_type, notes,
@@ -255,7 +251,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       customer_id || null,                         // 允许为空
-      viewing_time || new Date().toISOString(),    // 默认为当前时间
+      viewing_time ? new Date(viewing_time).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' '),    // 转换为MySQL datetime格式
       property_name || '未填写楼盘',                // 默认楼盘名
       property_address || null,
       room_type || 'one_bedroom',                  // 默认房型
@@ -270,18 +266,18 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       customerInfo?.phone || ''                    // 客户电话快照
     ]);
 
-    if (result.lastID && customer_id) {
+    if (result.lastInsertRowid && customer_id) {
       requestLogger.debug({
         customer_id,
         requestId
       }, '开始更新客户统计信息');
 
       // 如果有客户ID，更新客户的带看次数和总佣金
-      await db.run(`
-        UPDATE customers 
+      await dbManager.execute(`
+        UPDATE qft_ai_customers 
         SET 
-          viewing_count = (SELECT COUNT(*) FROM viewing_records WHERE customer_id = ?),
-          total_commission = (SELECT COALESCE(SUM(commission), 0) FROM viewing_records WHERE customer_id = ?),
+          viewing_count = (SELECT COUNT(*) FROM qft_ai_viewing_records WHERE customer_id = ?),
+          total_commission = (SELECT COALESCE(SUM(commission), 0) FROM qft_ai_viewing_records WHERE customer_id = ?),
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `, [customer_id, customer_id, customer_id]);
@@ -294,10 +290,10 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     }
 
     // 记录业务操作成功
-    if (result.lastID) {
+    if (result.lastInsertRowid) {
       requestLogger.info({
         statusCode: 201,
-        viewingRecordId: result.lastID,
+        viewingRecordId: result.lastInsertRowid,
         customer_id,
         customerName: customerInfo?.name,
         property_name: property_name || '未填写楼盘',
@@ -306,7 +302,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       }, 'API请求成功完成 - 带看记录创建成功');
 
       return createSuccessResponse(
-        { id: result.lastID },
+        { id: result.lastInsertRowid },
         '带看记录添加成功',
         201
       );

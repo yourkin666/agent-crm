@@ -1,39 +1,55 @@
-const sqlite3 = require('sqlite3').verbose();
-const { open } = require('sqlite');
+const mysql = require('mysql2/promise');
 const fs = require('fs');
 const path = require('path');
-
-// 数据库文件路径
-const DB_PATH = path.join(process.cwd(), 'data', 'crm.db');
-const DATA_DIR = path.dirname(DB_PATH);
+require('dotenv').config({ path: path.resolve(__dirname, '../.env.local') });
 
 async function setupDatabase() {
   try {
-    // 确保数据目录存在
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
+    console.log('正在连接MySQL数据库...');
 
-    // 如果数据库已存在，删除重建
-    if (fs.existsSync(DB_PATH)) {
-      fs.unlinkSync(DB_PATH);
-      console.log('已删除旧数据库文件');
+    // 检查环境变量
+    if (!process.env.DB_USER || !process.env.DB_PASSWORD || !process.env.DB_NAME) {
+      console.error('错误：请确保已配置数据库环境变量 (DB_USER, DB_PASSWORD, DB_NAME)');
+      console.log('请复制 .env.example 到 .env.local 并配置您的数据库信息');
+      process.exit(1);
     }
 
     // 创建数据库连接
-    const db = await open({
-      filename: DB_PATH,
-      driver: sqlite3.Database
+    const connection = await mysql.createConnection({
+      host: process.env.DB_HOST || '127.0.0.1',
+      port: Number(process.env.DB_PORT) || 3306,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      charset: 'utf8mb4'
     });
 
-    await db.exec('PRAGMA foreign_keys = ON');
-
+    console.log('数据库连接成功');
     console.log('正在初始化数据库...');
 
-    // 读取并执行 schema.sql
-    const schemaPath = path.join(process.cwd(), 'src', 'lib', 'database', 'schema.sql');
+    // 读取并执行 schema_qft_ai.sql
+    const schemaPath = path.join(process.cwd(), 'src', 'lib', 'database', 'schema_qft_ai.sql');
+    if (!fs.existsSync(schemaPath)) {
+      console.error(`错误：找不到schema文件: ${schemaPath}`);
+      process.exit(1);
+    }
+    
     const schema = fs.readFileSync(schemaPath, 'utf8');
-    await db.exec(schema);
+    
+    // 分割SQL语句并逐个执行
+    const statements = schema
+      .split(';')
+      .map(stmt => stmt.trim())
+      .filter(stmt => stmt.length > 0);
+
+    for (const statement of statements) {
+      try {
+        await connection.query(statement);
+      } catch (error) {
+        console.error(`执行SQL语句失败: ${statement.substring(0, 100)}...`);
+        console.error(error.message);
+      }
+    }
 
     console.log('数据库表结构创建完成');
 
@@ -42,7 +58,7 @@ async function setupDatabase() {
 
     // 插入示例客户数据
     const insertCustomerSQL = `
-      INSERT INTO customers (
+      INSERT INTO qft_ai_customers (
         name, phone, backup_phone, wechat, status, community, business_type, 
         room_type, room_tags, move_in_date, lease_period, price_range, 
         source_channel, creator, is_agent
@@ -58,32 +74,27 @@ async function setupDatabase() {
     ];
 
     for (const customer of sampleCustomers) {
-      await db.run(insertCustomerSQL, customer);
+      await connection.execute(insertCustomerSQL, customer);
     }
+
+    console.log('客户示例数据插入完成');
 
     // 插入示例带看记录数据
     const insertViewingRecordSQL = `
-      INSERT INTO viewing_records (
+      INSERT INTO qft_ai_viewing_records (
         customer_id, viewing_time, property_name, property_address,
         room_type, room_tag, viewer_name, viewing_status, viewing_feedback, commission, notes, business_type
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-
-    const stmt = await db.prepare(`
-      INSERT INTO viewing_records (
-        customer_id, viewing_time, property_name, property_address,
-        room_type, room_tag, viewer_name, viewing_status, viewing_feedback, commission, notes, business_type
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
 
     for (let i = 1; i <= 20; i++) {
       const customerId = Math.ceil(Math.random() * 5); // 只有5个客户
       const viewingDate = new Date(2024, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1);
       const viewerTypes = ['internal', 'external', 'external_sales', 'creator'];
 
-      await stmt.run(
+      await connection.execute(insertViewingRecordSQL, [
         customerId,
-        viewingDate.toISOString(),
+        viewingDate.toISOString().slice(0, 19).replace('T', ' '), // MySQL DATETIME格式
         `测试楼盘${i}`,
         `测试地址${i}号`,
         ['one_bedroom', 'two_bedroom', 'three_bedroom'][Math.floor(Math.random() * 3)],
@@ -94,39 +105,41 @@ async function setupDatabase() {
         Math.floor(Math.random() * 5000) + 1000,
         `测试备注${i}`,
         ['whole_rent', 'centralized', 'shared_rent'][Math.floor(Math.random() * 3)]
-      );
+      ]);
     }
 
-    await stmt.finalize();
-
-
+    console.log('带看记录示例数据插入完成');
 
     // 更新客户的统计数据（佣金总和、带看次数）
-    await db.exec(`
-      UPDATE customers SET 
+    await connection.query(`
+      UPDATE qft_ai_customers SET 
         total_commission = (
           SELECT COALESCE(SUM(commission), 0) 
-          FROM viewing_records 
-          WHERE viewing_records.customer_id = customers.id
+          FROM qft_ai_viewing_records 
+          WHERE qft_ai_viewing_records.customer_id = qft_ai_customers.id
         ),
         viewing_count = (
           SELECT COUNT(*) 
-          FROM viewing_records 
-          WHERE viewing_records.customer_id = customers.id
+          FROM qft_ai_viewing_records 
+          WHERE qft_ai_viewing_records.customer_id = qft_ai_customers.id
         )
     `);
 
-    console.log('示例数据插入完成');
+    console.log('客户统计数据更新完成');
 
     // 关闭数据库连接
-    await db.close();
+    await connection.end();
 
     console.log('数据库初始化完成！');
-    console.log(`数据库文件路径: ${DB_PATH}`);
+    console.log(`数据库信息: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
     console.log('可以运行 npm run dev 启动应用了。');
 
   } catch (error) {
     console.error('数据库初始化失败:', error);
+    console.error('\n请检查：');
+    console.error('1. MySQL服务是否已启动');
+    console.error('2. 数据库连接信息是否正确（.env.local文件）');
+    console.error('3. 数据库用户是否有足够权限');
     process.exit(1);
   }
 }

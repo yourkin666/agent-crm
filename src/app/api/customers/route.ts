@@ -223,7 +223,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   if (filters.viewing_today) {
     const today = new Date().toISOString().split('T')[0];
     conditions.push(`id IN (
-      SELECT DISTINCT customer_id FROM viewing_records 
+      SELECT DISTINCT customer_id FROM qft_ai_viewing_records 
       WHERE DATE(created_at) = ?
     )`);
     params.push(today);
@@ -240,15 +240,15 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
   // 构建基础查询和计数查询
   const baseQuery = `
-    SELECT * FROM customers 
+    SELECT * FROM qft_ai_customers 
     ${whereClause}
     ORDER BY created_at DESC
   `;
   
-  const countQuery = `SELECT COUNT(*) as count FROM customers ${whereClause}`;
+  const countQuery = `SELECT COUNT(*) as count FROM qft_ai_customers ${whereClause}`;
 
   // 计算符合筛选条件的总佣金
-  const totalCommissionQuery = `SELECT COALESCE(SUM(total_commission), 0) as total_commission FROM customers ${whereClause}`;
+  const totalCommissionQuery = `SELECT COALESCE(SUM(total_commission), 0) as total_commission FROM qft_ai_customers ${whereClause}`;
 
   try {
     // 记录查询开始
@@ -361,7 +361,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   // 如果提供了手机号，检查是否已存在
   if (body.phone) {
     const existingCustomer = await dbManager.queryOne(
-      'SELECT id FROM customers WHERE phone = ?',
+      'SELECT id FROM qft_ai_customers WHERE phone = ?',
       [body.phone]
     );
 
@@ -377,7 +377,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
   // 插入新客户，为必填字段提供默认值
   const insertSql = `
-    INSERT INTO customers (
+    INSERT INTO qft_ai_customers (
       name, phone, backup_phone, wechat, status, community,
       business_type, room_type, room_tags, move_in_date, lease_period,
       price_range, source_channel, creator, is_agent
@@ -418,7 +418,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     if (result.changes > 0) {
       // 获取新插入的客户信息
       const newCustomer = await dbManager.queryOne<any>(
-        'SELECT * FROM customers WHERE id = ?',
+        'SELECT * FROM qft_ai_customers WHERE id = ?',
         [result.lastInsertRowid]
       );
 
@@ -521,7 +521,7 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
 
   // 检查客户是否存在
   const existingCustomer = await dbManager.queryOne(
-    'SELECT * FROM customers WHERE id = ?',
+    'SELECT * FROM qft_ai_customers WHERE id = ?',
     [body.id]
   );
 
@@ -536,7 +536,7 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
   // 如果提供了手机号，检查是否被其他客户使用
   if (body.phone) {
     const phoneCheck = await dbManager.queryOne(
-      'SELECT id FROM customers WHERE phone = ? AND id != ?',
+      'SELECT id FROM qft_ai_customers WHERE phone = ? AND id != ?',
       [body.phone, body.id]
     );
 
@@ -553,7 +553,7 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
 
   // 更新客户信息
   const updateSql = `
-    UPDATE customers SET 
+    UPDATE qft_ai_customers SET 
       name = ?, phone = ?, backup_phone = ?, wechat = ?, status = ?, community = ?,
       business_type = ?, room_type = ?, room_tags = ?, move_in_date = ?, lease_period = ?,
       price_range = ?, source_channel = ?, is_agent = ?, updated_at = CURRENT_TIMESTAMP
@@ -595,7 +595,7 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
     if (result.changes > 0) {
       // 获取更新后的客户信息
       const updatedCustomer = await dbManager.queryOne<any>(
-        'SELECT * FROM customers WHERE id = ?',
+        'SELECT * FROM qft_ai_customers WHERE id = ?',
         [body.id]
       );
 

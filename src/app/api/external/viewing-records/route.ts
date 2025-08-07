@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/database';
+import { dbManager } from '@/lib/database';
 import { withErrorHandler, createDatabaseError, createSuccessResponse, createValidationError } from '@/lib/api-error-handler';
 import { createRequestLogger } from '@/lib/logger';
 
@@ -203,8 +203,6 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   validateExternalViewingData(body);
 
   try {
-    const db = await getDatabase();
-
     const {
       userId,
       botId,
@@ -248,8 +246,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       requestId
     }, '开始查找客户');
 
-    const existingCustomer = await db.get(
-      'SELECT id, name, phone, community FROM customers WHERE userId = ?',
+    const existingCustomer = await dbManager.queryOne(
+      'SELECT id, name, phone, community FROM qft_ai_customers WHERE userId = ?',
       [userId]
     );
 
@@ -268,8 +266,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       // 从带看数据中提取客户信息进行更新
       const customerUpdateData = extractCustomerDataFromViewing(body);
 
-      await db.run(`
-        UPDATE customers SET 
+      await dbManager.execute(`
+        UPDATE qft_ai_customers SET 
           botId = COALESCE(?, botId),
           nickname = COALESCE(?, nickname),
           name = COALESCE(?, name),
@@ -317,8 +315,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       // 从带看数据中提取客户信息进行创建
       const customerCreateData = extractCustomerDataFromViewing(body);
 
-      const customerResult = await db.run(`
-        INSERT INTO customers (
+      const customerResult = await dbManager.execute(`
+        INSERT INTO qft_ai_customers (
           userId, botId, nickname, name, phone,
           status, community, business_type, room_type, room_tags,
           source_channel, creator, is_agent, internal_notes
@@ -338,8 +336,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         customerCreateData.internal_notes
       ]);
 
-      if (customerResult.lastID) {
-        customerId = customerResult.lastID;
+      if (customerResult.lastInsertRowid) {
+        customerId = customerResult.lastInsertRowid;
         requestLogger.debug({
           customerId,
           userId,
@@ -435,8 +433,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       requestId
     }, '房源数据合并完成');
 
-    const viewingResult = await db.run(`
-      INSERT INTO viewing_records (
+    const viewingResult = await dbManager.execute(`
+      INSERT INTO qft_ai_viewing_records (
         customer_id, viewing_time, property_name, property_address,
         room_type, room_tag, viewer_name, viewing_status, commission,
         viewing_feedback, business_type, notes, customer_name, customer_phone,
@@ -446,7 +444,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       customerId,
-      viewing_time || new Date().toISOString(),
+      viewing_time ? new Date(viewing_time).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' '),
       property_name,
       property_address,
       room_type,
@@ -479,17 +477,17 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     ]);
 
     // 步骤5: 更新客户统计信息
-    if (customerId && viewingResult.lastID) {
+    if (customerId && viewingResult.lastInsertRowid) {
       requestLogger.debug({
         customerId,
         requestId
       }, '开始更新客户统计信息');
 
-      await db.run(`
-        UPDATE customers 
+      await dbManager.execute(`
+        UPDATE qft_ai_customers 
         SET 
-          viewing_count = (SELECT COUNT(*) FROM viewing_records WHERE customer_id = ?),
-          total_commission = (SELECT COALESCE(SUM(commission), 0) FROM viewing_records WHERE customer_id = ?),
+          viewing_count = (SELECT COUNT(*) FROM qft_ai_viewing_records WHERE customer_id = ?),
+          total_commission = (SELECT COALESCE(SUM(commission), 0) FROM qft_ai_viewing_records WHERE customer_id = ?),
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `, [customerId, customerId, customerId]);
@@ -498,7 +496,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         statusCode: 201,
         customerId,
         customerAction,
-        viewingRecordId: viewingResult.lastID,
+        viewingRecordId: viewingResult.lastInsertRowid,
         userId,
         customer_name,
         property_name,
@@ -513,9 +511,9 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         requestId
       }, '外部API请求成功完成 - 带看记录录入成功（已自动填入外部房源信息）');
 
-      return createSuccessResponse(
-        {
-          viewing_record_id: viewingResult.lastID,
+              return createSuccessResponse(
+          {
+            viewing_record_id: viewingResult.lastInsertRowid,
           customer_id: customerId,
           customer_action: customerAction,
           userId,

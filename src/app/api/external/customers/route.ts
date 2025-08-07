@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/database';
+import { dbManager } from '@/lib/database';
 import { withErrorHandler, createDatabaseError, createSuccessResponse, createValidationError } from '@/lib/api-error-handler';
 import { createRequestLogger } from '@/lib/logger';
 
@@ -53,8 +53,6 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   validateExternalCustomerData(body);
 
   try {
-    const db = await getDatabase();
-
     const {
       userId,
       botId,
@@ -77,8 +75,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     } = body;
 
     // 检查是否已存在相同userId的客户
-    const existingCustomer = await db.get(
-      'SELECT id, name, phone FROM customers WHERE userId = ?',
+    const existingCustomer = await dbManager.queryOne(
+      'SELECT id, name, phone FROM qft_ai_customers WHERE userId = ?',
       [userId]
     );
 
@@ -91,8 +89,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       }, '客户已存在，将进行更新操作');
 
       // 更新现有客户
-      const result = await db.run(`
-        UPDATE customers SET 
+      const result = await dbManager.execute(`
+        UPDATE qft_ai_customers SET 
           botId = COALESCE(?, botId),
           nickname = COALESCE(?, nickname),
           name = COALESCE(?, name),
@@ -113,9 +111,9 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           updated_at = CURRENT_TIMESTAMP
         WHERE userId = ?
       `, [
-        botId, nickname, name, phone, backup_phone, wechat, status,
-        community, business_type, room_type, room_tags, move_in_date,
-        lease_period, price_range, source_channel, creator, internal_notes,
+        botId || null, nickname || null, name || '', phone || null, backup_phone || null, wechat || null, status,
+        community || '', business_type, room_type, room_tags || null, move_in_date || null,
+        lease_period || null, price_range || null, source_channel, creator, internal_notes || null,
         userId
       ]);
 
@@ -142,24 +140,24 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       }, '客户不存在，将创建新客户');
 
       // 创建新客户
-      const result = await db.run(`
-        INSERT INTO customers (
+      const result = await dbManager.execute(`
+        INSERT INTO qft_ai_customers (
           userId, botId, nickname, name, phone, backup_phone, wechat,
           status, community, business_type, room_type, room_tags,
           move_in_date, lease_period, price_range, source_channel,
           creator, is_agent, internal_notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
-        userId, botId, nickname, name, phone, backup_phone, wechat,
-        status, community, business_type, room_type, room_tags,
-        move_in_date, lease_period, price_range, source_channel,
-        creator, internal_notes
+        userId, botId || null, nickname || null, name || '', phone || null, backup_phone || null, wechat || null,
+        status, community || '', business_type, room_type, room_tags || null,
+        move_in_date || null, lease_period || null, price_range || null, source_channel,
+        creator, 0, internal_notes || null
       ]);
 
-      if (result.lastID) {
+      if (result.lastInsertRowid) {
         requestLogger.info({
           statusCode: 201,
-          customerId: result.lastID,
+          customerId: result.lastInsertRowid,
           userId,
           name,
           requestId
@@ -167,7 +165,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
         return createSuccessResponse(
           { 
-            id: result.lastID, 
+            id: result.lastInsertRowid, 
             userId,
             action: 'created'
           },

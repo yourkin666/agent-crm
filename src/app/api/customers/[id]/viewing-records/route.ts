@@ -1,32 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '../../../../../lib/database';
+import { dbManager } from '../../../../../lib/database';
+import { createDatabaseError, createValidationError, createNotFoundError, withErrorHandler } from '../../../../../lib/api-error-handler';
+import { createRequestLogger } from '../../../../../lib/logger';
 
-export async function GET(
+export const GET = withErrorHandler(async (
   request: NextRequest,
   { params }: { params: { id: string } }
-) {
+) => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const requestLogger = createRequestLogger(requestId);
+  
+  const customerId = parseInt(params.id);
+
+  if (isNaN(customerId)) {
+    requestLogger.warn({
+      customerId: params.id,
+      requestId
+    }, '无效的客户ID');
+    throw createValidationError('无效的客户ID');
+  }
+
   try {
-    const db = await getDatabase();
-    const customerId = parseInt(params.id);
-
-    if (isNaN(customerId)) {
-      return NextResponse.json(
-        { success: false, error: '无效的客户ID' },
-        { status: 400 }
-      );
-    }
-
-    // 先获取客户电话号码
-    const customer = await db.get('SELECT phone FROM customers WHERE id = ?', [customerId]);
+    // 先验证客户是否存在
+    const customer = await dbManager.queryOne(
+      'SELECT id, name, phone FROM qft_ai_customers WHERE id = ?', 
+      [customerId]
+    );
+    
     if (!customer) {
-      return NextResponse.json(
-        { success: false, error: '客户不存在' },
-        { status: 404 }
-      );
+      requestLogger.warn({
+        customerId,
+        requestId
+      }, '客户不存在');
+      throw createNotFoundError('客户');
     }
 
-    // 获取直接添加的带看记录
-    const directViewingRecords = await db.all(`
+    // 获取该客户的所有带看记录
+    const viewingRecords = await dbManager.query(`
       SELECT 
         'viewing_record' as source_type,
         vr.id,
@@ -45,24 +55,29 @@ export async function GET(
         'direct' as source_channel,
         vr.created_at,
         vr.updated_at,
-        c.name as customer_name
-      FROM viewing_records vr
-      LEFT JOIN customers c ON vr.customer_id = c.id
+        c.name as customer_name,
+        c.phone as customer_phone
+      FROM qft_ai_viewing_records vr
+      LEFT JOIN qft_ai_customers c ON vr.customer_id = c.id
       WHERE vr.customer_id = ?
       ORDER BY vr.viewing_time DESC, vr.created_at DESC
     `, [customerId]);
 
+    requestLogger.info({
+      customerId,
+      recordCount: viewingRecords.length,
+      requestId
+    }, '成功获取客户带看记录');
+
     return NextResponse.json({
       success: true,
-      data: directViewingRecords
+      data: viewingRecords
     });
 
   } catch (error) {
-    console.error('获取客户带看记录失败:', error);
-    const errorMessage = error instanceof Error ? error.message : '未知错误';
-    return NextResponse.json(
-      { success: false, error: `服务器内部错误: ${errorMessage}` },
-      { status: 500 }
-    );
+    if (error instanceof Error && (error as any).statusCode) {
+      throw error;
+    }
+    throw createDatabaseError('获取客户带看记录失败', error as Error);
   }
-} 
+}); 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabase } from '@/lib/database';
+import { dbManager } from '@/lib/database';
 import { withErrorHandler, createDatabaseError, createSuccessResponse, createNotFoundError } from '@/lib/api-error-handler';
 import { createRequestLogger } from '@/lib/logger';
 import { validateViewingRecordData } from '@/lib/validation';
@@ -26,10 +26,8 @@ export const GET = withErrorHandler(async (request: NextRequest, { params }: { p
   }, 'API请求开始 - 获取带看记录详情');
 
   try {
-    const db = await getDatabase();
-    
     // 查询带看记录详情
-    const record = await db.get(`
+    const record = await dbManager.queryOne(`
       SELECT 
         id,
         customer_id,
@@ -65,7 +63,7 @@ export const GET = withErrorHandler(async (request: NextRequest, { params }: { p
         houseTypeId,
         created_at,
         updated_at
-      FROM viewing_records 
+      FROM qft_ai_viewing_records 
       WHERE id = ?
     `, [id]);
 
@@ -137,10 +135,8 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: { p
   validateViewingRecordData(body);
 
   try {
-    const db = await getDatabase();
-
     // 检查记录是否存在
-    const existingRecord = await db.get('SELECT id, customer_id FROM viewing_records WHERE id = ?', [id]);
+    const existingRecord = await dbManager.queryOne('SELECT id, customer_id FROM qft_ai_viewing_records WHERE id = ?', [id]);
     
     if (!existingRecord) {
       requestLogger.warn({
@@ -188,8 +184,8 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: { p
     }, '开始更新带看记录');
 
     // 更新带看记录
-    const result = await db.run(`
-      UPDATE viewing_records SET 
+    const result = await dbManager.execute(`
+      UPDATE qft_ai_viewing_records SET 
         viewing_time = COALESCE(?, viewing_time),
         property_name = COALESCE(?, property_name),
         property_address = ?,
@@ -221,34 +217,34 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: { p
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `, [
-      viewing_time,
-      property_name,
-      property_address,
-      room_type,
-      room_tag,
-      viewer_name,
-      viewing_status,
-      commission,
-      viewing_feedback,
-      business_type,
-      notes,
-      userId,
-      botId,
-      housingId,
-      houseAreaId,
-      houseAreaName,
-      cityId,
-      cityName,
-      propertyAddrId,
-      unitType,
-      longitude,
-      latitude,
-      roomId,
-      advisorId,
-      advisorName,
-      companyName,
-      companyAbbreviation,
-      houseTypeId,
+      viewing_time ? new Date(viewing_time).toISOString().slice(0, 19).replace('T', ' ') : null,
+      property_name || null,
+      property_address || null,
+      room_type || null,
+      room_tag || null,
+      viewer_name || null,
+      viewing_status || null,
+      commission || null,
+      viewing_feedback || null,
+      business_type || null,
+      notes || null,
+      userId || null,
+      botId || null,
+      housingId || null,
+      houseAreaId || null,
+      houseAreaName || null,
+      cityId || null,
+      cityName || null,
+      propertyAddrId || null,
+      unitType || null,
+      longitude || null,
+      latitude || null,
+      roomId || null,
+      advisorId || null,
+      advisorName || null,
+      companyName || null,
+      companyAbbreviation || null,
+      houseTypeId || null,
       id
     ]);
 
@@ -268,11 +264,11 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: { p
         requestId
       }, '开始更新客户统计信息');
 
-      await db.run(`
-        UPDATE customers 
+      await dbManager.execute(`
+        UPDATE qft_ai_customers 
         SET 
-          viewing_count = (SELECT COUNT(*) FROM viewing_records WHERE customer_id = ?),
-          total_commission = (SELECT COALESCE(SUM(commission), 0) FROM viewing_records WHERE customer_id = ?),
+          viewing_count = (SELECT COUNT(*) FROM qft_ai_viewing_records WHERE customer_id = ?),
+          total_commission = (SELECT COALESCE(SUM(commission), 0) FROM qft_ai_viewing_records WHERE customer_id = ?),
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `, [existingRecord.customer_id, existingRecord.customer_id, existingRecord.customer_id]);

@@ -108,12 +108,18 @@ export function getChineseTimestamp(date?: Date): string {
 function createLogger() {
   const level = getLogLevel();
   const isDevelopment = process.env.NODE_ENV === 'development';
-  const logDir = ensureLogDirectory();
 
-  // 基础配置
+  // 简化配置，只输出到控制台，避免线程流问题
   const baseConfig = {
     level,
-    timestamp: customTimeFormat,
+    transport: isDevelopment ? {
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        translateTime: 'yyyy-mm-dd HH:MM:ss',
+        ignore: 'pid,hostname',
+      },
+    } : undefined,
     formatters: {
       level: (label: string, number: number) => {
         return { 
@@ -126,59 +132,7 @@ function createLogger() {
     },
   };
 
-  if (isDevelopment) {
-    // 开发环境：同时输出到控制台（格式化）和文件（JSON）
-    return pino(baseConfig, pino.multistream([
-      // 控制台输出 - 格式化显示
-      {
-        level,
-        stream: pino.transport({
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-            translateTime: 'yyyy-mm-dd HH:MM:ss',
-            ignore: 'pid,hostname',
-          },
-        }),
-      },
-      // 文件输出 - JSON格式
-      {
-        level,
-        stream: pino.destination({
-          dest: path.join(logDir, getLogFileName('app')),
-          sync: false, // 异步写入以提高性能
-        }),
-      },
-      // 错误日志单独文件
-      {
-        level: 'error',
-        stream: pino.destination({
-          dest: path.join(logDir, getLogFileName('error')),
-          sync: false,
-        }),
-      },
-    ]));
-  } else {
-    // 生产环境：只输出到文件
-    return pino(baseConfig, pino.multistream([
-      // 应用日志文件
-      {
-        level,
-        stream: pino.destination({
-          dest: path.join(logDir, getLogFileName('app')),
-          sync: false,
-        }),
-      },
-      // 错误日志单独文件
-      {
-        level: 'error',
-        stream: pino.destination({
-          dest: path.join(logDir, getLogFileName('error')),
-          sync: false,
-        }),
-      },
-    ]));
-  }
+  return pino(baseConfig);
 }
 
 /**
