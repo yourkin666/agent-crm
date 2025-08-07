@@ -9,6 +9,7 @@ import type { ColumnsType } from 'antd/es/table';
 import type { TabsProps } from 'antd';
 import { Customer, ViewingRecord } from '@/types';
 import AddViewingModal from './AddViewingModal';
+import EditViewingModal from '../viewing-records/EditViewingModal';
 import {
   CUSTOMER_STATUS_TEXT, CUSTOMER_STATUS_COLOR,
   SOURCE_CHANNEL_TEXT_BY_STRING, BUSINESS_TYPE_TEXT_BY_STRING,
@@ -33,6 +34,8 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
   const [viewingRecords, setViewingRecords] = useState<ViewingRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [addViewingVisible, setAddViewingVisible] = useState(false);
+  const [editViewingVisible, setEditViewingVisible] = useState(false);
+  const [selectedViewingRecord, setSelectedViewingRecord] = useState<ViewingRecord | null>(null);
   const [currentTab, setCurrentTab] = useState('info');
 
   // 加载客户的带看记录
@@ -124,12 +127,16 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
       dataIndex: 'viewing_feedback',
       key: 'viewing_feedback',
       width: 80,
-      render: (feedback: number) =>
-        feedback !== null && feedback !== undefined ? (
-          <Tag color={(VIEWING_FEEDBACK_COLOR as Record<number, string>)[feedback]}>
-            {(VIEWING_FEEDBACK_TEXT as Record<number, string>)[feedback]}
+      render: (feedback: number) => {
+        if (feedback === null || feedback === undefined) return '-';
+        const feedbackText = feedback === 0 ? '未成交' : feedback === 1 ? '已成交' : '-';
+        const feedbackColor = feedback === 1 ? 'green' : 'orange';
+        return (
+          <Tag color={feedbackColor}>
+            {feedbackText}
           </Tag>
-        ) : '-',
+        );
+      },
     },
   ];
 
@@ -139,6 +146,27 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
     if (customer) {
       loadViewingRecords(customer.id);
     }
+  };
+
+  // 处理点击行编辑带看记录
+  const handleRowClick = (record: ViewingRecord) => {
+    setSelectedViewingRecord(record);
+    setEditViewingVisible(true);
+  };
+
+  // 处理编辑带看记录成功
+  const handleEditViewingSuccess = () => {
+    if (customer) {
+      loadViewingRecords(customer.id);
+    }
+    setEditViewingVisible(false);
+    setSelectedViewingRecord(null);
+  };
+
+  // 处理编辑带看记录取消
+  const handleEditViewingCancel = () => {
+    setEditViewingVisible(false);
+    setSelectedViewingRecord(null);
   };
 
   // 定义Tab项
@@ -282,7 +310,10 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
       children: (
         <div className="-mt-2">
           <div className="flex justify-between items-center mb-2">
-            <h3 className="text-base font-medium">带看记录列表</h3>
+            <div>
+              <h3 className="text-base font-medium">带看记录列表</h3>
+              <p className="text-xs text-gray-500 mt-1">点击表格行可直接编辑带看记录</p>
+            </div>
             <Button 
               type="primary"
               icon={<PlusOutlined />}
@@ -305,6 +336,11 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
               rowKey="id"
               pagination={false}
               size="small"
+              onRow={(record) => ({
+                onClick: () => handleRowClick(record),
+                style: { cursor: 'pointer' },
+              })}
+              rowClassName="hover:bg-gray-50"
             />
           ) : (
             <Empty
@@ -349,6 +385,21 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
         onCancel={() => setAddViewingVisible(false)}
         onSuccess={handleAddViewingSuccess}
       />
+
+      <EditViewingModal
+        visible={editViewingVisible}
+        record={selectedViewingRecord}
+        onCancel={handleEditViewingCancel}
+        onSuccess={handleEditViewingSuccess}
+      />
     </>
   );
 }
+
+/*
+功能说明：
+1. 在客户详情页面的带看记录表格中，点击任意表格行即可直接编辑该带看记录
+2. 鼠标悬停时会有蓝色背景提示，表示该行可点击
+3. 点击后会弹出编辑模态框，包含该记录的所有信息
+4. 编辑成功后会自动刷新带看记录列表并关闭模态框
+*/

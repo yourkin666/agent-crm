@@ -102,8 +102,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   }
 
   if (filters.phone) {
-    conditions.push('phone LIKE ?');
-    params.push(`%${filters.phone}%`);
+    conditions.push('(phone LIKE ? OR backup_phone LIKE ?)');
+    params.push(`%${filters.phone}%`, `%${filters.phone}%`);
   }
 
   // 状态筛选（支持多选）

@@ -274,9 +274,10 @@ export default function ViewingRecordsPage() {
             width: 100,
             render: (feedback: number) => {
                 if (feedback === undefined || feedback === null) return '-';
+                const feedbackText = feedback === 0 ? '未成交' : feedback === 1 ? '已成交' : '-';
                 return (
                     <Tag color={feedback === 1 ? 'green' : 'orange'}>
-                        {VIEWING_FEEDBACK_TEXT[feedback as keyof typeof VIEWING_FEEDBACK_TEXT]}
+                        {feedbackText}
                     </Tag>
                 );
             },

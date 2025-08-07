@@ -259,7 +259,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       viewer_name || 'internal',                   // 默认带看人类型
       viewing_status,
       commission,
-      viewing_feedback || null,
+      viewing_feedback !== undefined && viewing_feedback !== null ? viewing_feedback : null,
       business_type || 'whole_rent',               // 默认业务类型
       notes || null,
       customerInfo?.name || '',                    // 客户姓名快照

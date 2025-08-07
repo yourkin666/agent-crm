@@ -138,11 +138,31 @@ export default function CustomersPage() {
 
     // 搜索处理
     const handleSearch = (values: any) => {
-        const newFilters = {
+        const searchText = values.searchText?.trim();
+        
+        // 构建新的筛选条件
+        const newFilters: any = {
             ...filters,
-            ...values,
             page: 1, // 重置到第一页
         };
+
+        // 清除之前的搜索条件
+        delete newFilters.name;
+        delete newFilters.phone;
+
+        if (searchText) {
+            // 判断是否为手机号（纯数字且长度为11位）
+            const isPhoneNumber = /^1[3-9]\d{9}$/.test(searchText);
+            
+            if (isPhoneNumber) {
+                // 如果是手机号格式，按手机号搜索
+                newFilters.phone = searchText;
+            } else {
+                // 否则按姓名搜索
+                newFilters.name = searchText;
+            }
+        }
+
         setFilters(newFilters);
         loadCustomers(newFilters);
     };
@@ -419,8 +439,13 @@ export default function CustomersPage() {
                         className="filter-form"
                     >
                         <div className="filter-row">
-                            <Form.Item name="name" className="w-64">
-                                <Input placeholder="输入客户姓名、昵称、电话" allowClear />
+                            <Form.Item name="searchText" className="w-64">
+                                <Input 
+                                    placeholder="输入客户姓名、昵称、电话后按回车搜索" 
+                                    allowClear 
+                                    onPressEnter={() => form.submit()}
+                                    prefix={<SearchOutlined className="text-gray-400" />}
+                                />
                             </Form.Item>
                             <Form.Item className="ml-auto">
                                 <Space size="small">
@@ -430,9 +455,6 @@ export default function CustomersPage() {
                                         className="filter-more-btn"
                                     >
                                         更多筛选
-                                    </Button>
-                                    <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
-                                        搜索
                                     </Button>
                                     <Button onClick={handleReset}>
                                         清空
@@ -476,6 +498,9 @@ export default function CustomersPage() {
                                     )}
                                 </Space>
                             </Form.Item>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-2 ml-1">
+                            💡 智能识别：输入11位手机号自动按手机号搜索，否则按姓名搜索（支持主手机号和备用手机号）
                         </div>
                     </Form>
                 </Card>

@@ -26,6 +26,16 @@
   border-bottom: 1px solid #f3f4f6;
 }
 
+/* 可点击的表格行样式 */
+.ant-table-tbody > tr.ant-table-row[style*="cursor: pointer"]:hover > td {
+  background: #e0f2ff;
+  transition: background-color 0.2s ease;
+}
+
+.ant-table-tbody > tr.ant-table-row[style*="cursor: pointer"] > td {
+  transition: background-color 0.2s ease;
+}
+
 /* 自定义页面布局样式 */
 .page-header {
   @apply mb-3 bg-white p-3 rounded-xl shadow-sm border border-gray-100;

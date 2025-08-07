@@ -187,7 +187,7 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
       onOk={() => form.submit()}
       confirmLoading={loading}
       width={600}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}
@@ -341,9 +341,8 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
               label="带看反馈"
             >
               <Select placeholder="请选择带看反馈" allowClear>
-                {Object.entries(VIEWING_FEEDBACK_TEXT).map(([key, value]) => (
-                  <Option key={parseInt(key)} value={parseInt(key)}>{value}</Option>
-                ))}
+                <Option value={0}>未成交</Option>
+                <Option value={1}>已成交</Option>
               </Select>
             </Form.Item>
           </Col>

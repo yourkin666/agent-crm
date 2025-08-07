@@ -93,7 +93,7 @@ export default function ViewingDetailModal({ visible, record, onCancel }: Viewin
                     <Descriptions.Item label="带看反馈">
                         {record.viewing_feedback !== undefined && record.viewing_feedback !== null ? (
                             <Tag color={record.viewing_feedback === 1 ? 'green' : 'orange'}>
-                                {VIEWING_FEEDBACK_TEXT[record.viewing_feedback as keyof typeof VIEWING_FEEDBACK_TEXT]}
+                                {record.viewing_feedback === 0 ? '未成交' : record.viewing_feedback === 1 ? '已成交' : '-'}
                             </Tag>
                         ) : '-'}
                     </Descriptions.Item>
@@ -161,7 +161,7 @@ export default function ViewingDetailModal({ visible, record, onCancel }: Viewin
             onCancel={onCancel}
             footer={null}
             width={800}
-            destroyOnClose
+            destroyOnHidden
         >
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
                 {items.map((item) => (

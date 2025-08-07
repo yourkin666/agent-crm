@@ -225,7 +225,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: { p
       viewer_name || null,
       viewing_status || null,
       commission || null,
-      viewing_feedback || null,
+      viewing_feedback !== undefined && viewing_feedback !== null ? viewing_feedback : null,
       business_type || null,
       notes || null,
       userId || null,
