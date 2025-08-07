@@ -13,7 +13,7 @@ import type { ColumnsType } from 'antd/es/table';
 import MainLayout from '@/components/layout/MainLayout';
 import ViewingDetailModal from '@/components/viewing-records/ViewingDetailModal';
 import EditViewingModal from '@/components/viewing-records/EditViewingModal';
-import { ViewingRecord, ApiResponse, PaginatedResponse } from '@/types';
+import { ViewingRecord, ApiResponse, PaginatedResponse, ViewingRecordStats } from '@/types';
 import {
     VIEWING_STATUS_TEXT, VIEWING_STATUS_COLOR, BUSINESS_TYPE_TEXT,
     VIEWER_TYPE_TEXT_BY_STRING, VIEWING_FEEDBACK_TEXT, DEFAULT_PAGE_SIZE,
@@ -40,10 +40,13 @@ interface ViewingRecordFilterParams {
 export default function ViewingRecordsPage() {
     const [viewingRecords, setViewingRecords] = useState<ViewingRecord[]>([]);
     const [loading, setLoading] = useState(false);
-    const [totalCommission, setTotalCommission] = useState(0); // 总佣金
-    const [totalRecords, setTotalRecords] = useState(0); // 总记录数
-    const [completedRecords, setCompletedRecords] = useState(0); // 已完成记录数
-    const [pendingRecords, setPendingRecords] = useState(0); // 待处理记录数
+    const [statsLoading, setStatsLoading] = useState(false);
+    const [stats, setStats] = useState<ViewingRecordStats>({
+        total_records: 0,
+        completed_records: 0,
+        pending_records: 0,
+        total_commission: 0
+    });
     
     const [pagination, setPagination] = useState({
         current: 1,
@@ -64,6 +67,33 @@ export default function ViewingRecordsPage() {
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<ViewingRecord | null>(null);
+
+    // 获取统计数据
+    const fetchViewingStats = async (params: ViewingRecordFilterParams = {}) => {
+        setStatsLoading(true);
+        try {
+            const queryParams = new URLSearchParams();
+            Object.entries({ ...filters, ...params }).forEach(([key, value]) => {
+                if (value !== undefined && value !== '' && value !== null) {
+                    queryParams.append(key, String(value));
+                }
+            });
+
+            const response = await fetch(`/api/viewing-records/stats?${queryParams}`);
+            const result: ApiResponse<ViewingRecordStats> = await response.json();
+
+            if (result.success && result.data) {
+                setStats(result.data);
+            } else {
+                message.error(result.error || '获取统计数据失败');
+            }
+        } catch (error) {
+            console.error('获取统计数据失败:', error);
+            message.error('网络请求失败');
+        } finally {
+            setStatsLoading(false);
+        }
+    };
 
     // 获取带看记录数据
     const fetchViewingRecords = async (params: ViewingRecordFilterParams = {}) => {
@@ -87,13 +117,6 @@ export default function ViewingRecordsPage() {
                     current: data.page,
                     total: data.total,
                 }));
-
-                // 计算统计数据
-                const records = data.data;
-                setTotalRecords(data.total);
-                setTotalCommission(records.reduce((sum, record) => sum + record.commission, 0));
-                setCompletedRecords(records.filter(record => record.viewing_status === 4).length);
-                setPendingRecords(records.filter(record => record.viewing_status === 1).length);
             } else {
                 message.error(result.error || '获取带看记录失败');
             }
@@ -133,6 +156,7 @@ export default function ViewingRecordsPage() {
         };
         setFilters(newFilters);
         fetchViewingRecords(newFilters);
+        fetchViewingStats(newFilters);
     };
 
     // 重置搜索
@@ -144,6 +168,7 @@ export default function ViewingRecordsPage() {
         };
         setFilters(resetFilters);
         fetchViewingRecords(resetFilters);
+        fetchViewingStats(resetFilters);
     };
 
     // 分页处理
@@ -155,6 +180,7 @@ export default function ViewingRecordsPage() {
         };
         setFilters(newFilters);
         fetchViewingRecords(newFilters);
+        // 分页不需要重新获取统计数据，因为统计数据与页码无关
     };
 
     // 查看详情
@@ -178,6 +204,7 @@ export default function ViewingRecordsPage() {
     // 编辑成功后刷新列表
     const handleEditSuccess = () => {
         fetchViewingRecords(filters);
+        fetchViewingStats(filters);
     };
 
     // 表格列定义
@@ -315,6 +342,7 @@ export default function ViewingRecordsPage() {
     // 初始化数据
     useEffect(() => {
         fetchViewingRecords();
+        fetchViewingStats();
     }, []);
 
     return (
@@ -326,8 +354,9 @@ export default function ViewingRecordsPage() {
                         <Card>
                             <Statistic 
                                 title="总记录数" 
-                                value={totalRecords}
+                                value={stats.total_records}
                                 prefix={<EyeOutlined />}
+                                loading={statsLoading}
                             />
                         </Card>
                     </Col>
@@ -335,8 +364,9 @@ export default function ViewingRecordsPage() {
                         <Card>
                             <Statistic 
                                 title="已完成" 
-                                value={completedRecords}
+                                value={stats.completed_records}
                                 valueStyle={{ color: '#3f8600' }}
+                                loading={statsLoading}
                             />
                         </Card>
                     </Col>
@@ -344,8 +374,9 @@ export default function ViewingRecordsPage() {
                         <Card>
                             <Statistic 
                                 title="待处理" 
-                                value={pendingRecords}
+                                value={stats.pending_records}
                                 valueStyle={{ color: '#cf1322' }}
+                                loading={statsLoading}
                             />
                         </Card>
                     </Col>
@@ -353,10 +384,18 @@ export default function ViewingRecordsPage() {
                         <Card>
                             <Statistic 
                                 title="总佣金" 
-                                value={totalCommission}
+                                value={stats.total_commission}
                                 precision={2}
                                 suffix="元"
                                 valueStyle={{ color: '#1890ff' }}
+                                loading={statsLoading}
+                                formatter={(value) => {
+                                    if (typeof value !== 'number') return '0';
+                                    return value.toLocaleString('zh-CN', { 
+                                        minimumFractionDigits: 2, 
+                                        maximumFractionDigits: 2 
+                                    });
+                                }}
                             />
                         </Card>
                     </Col>

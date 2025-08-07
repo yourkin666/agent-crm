@@ -153,6 +153,14 @@ export interface ViewingRecord {
 
 
 
+// 带看记录统计数据接口
+export interface ViewingRecordStats {
+  total_records: number;      // 总记录数
+  completed_records: number;  // 已完成记录数
+  pending_records: number;    // 待处理记录数
+  total_commission: number;   // 总佣金
+}
+
 // API 响应接口
 export interface ApiResponse<T = any> {
   success: boolean;
