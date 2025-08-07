@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     queryParams.append('limit', limit);
     
     const queryString = queryParams.toString();
-    const url = `http://localhost:8080/api/housing/property-addresses${queryString ? `?${queryString}` : ''}`;
+    const url = `https://ai-agent-test.quanfangtongvip.com/housing-push/api/housing/property-addresses${queryString ? `?${queryString}` : ''}`;
     
     // 调用外部物业地址查询接口
     const response = await fetch(url, {

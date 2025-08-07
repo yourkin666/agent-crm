@@ -23,7 +23,7 @@ export async function GET(
     if (maxPrice) queryParams.append('maxPrice', maxPrice);
     
     const queryString = queryParams.toString();
-    const url = `http://localhost:8080/api/housing/property-details/${propertyAddrId}${queryString ? `?${queryString}` : ''}`;
+    const url = `https://ai-agent-test.quanfangtongvip.com/housing-push/api/housing/property-details/${propertyAddrId}${queryString ? `?${queryString}` : ''}`;
     
     // 调用外部物业详细地址查询接口
     const response = await fetch(url, {
