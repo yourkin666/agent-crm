@@ -1,206 +1,87 @@
-# CRM 客户关系管理系统
+# Agent CRM 房产中介客户管理
 
-一个专为房产中介业务设计的客户关系管理系统，提供客户管理和预约带看功能。
+面向房产中介的轻量级 CRM：管理客户、记录带看、查询小区地址并做基础统计。
 
-## 功能特性
+## 功能
 
-### 🏠 客户管理
-
-- **客户信息管理**：完整的客户档案，包括基本信息、联系方式、需求偏好
-- **状态跟踪**：客户状态流转（跟进中 → 已约带看 → 已成交等）
-- **智能筛选**：支持多维度筛选（状态、来源、价格区间等）
-- **统计分析**：客户总数、成交率、佣金统计等
-
-### 📅 预约带看
-
-- **预约管理**：完整的预约流程管理
-- **状态追踪**：待确认 → 已确认 → 进行中 → 已完成
-- **数据转化**：预约完成后自动转化为客户带看记录
-- **城市筛选**：支持按城市筛选预约数据
-
-### 📊 数据统计
-
-- **实时统计**：首页显示关键业务指标
-- **数据同步**：客户和预约数据实时联动
-- **佣金计算**：自动计算和统计佣金信息
+- **客户管理**：客户档案（姓名、联系方式、需求偏好）、状态流转、详情编辑、智能筛选
+- **带看记录**：新增/编辑、状态与反馈、佣金记录、客户维度统计
+- **数据统计**：关键指标总览（客户数、带看数、成交数/佣金等）
+- **小区查询**：联想搜索小区地址，外部接口聚合检索
+- **日志与监控**：统一 API 日志；数据库健康检查
 
 ## 技术栈
 
-### 前端
-
-- **React 18** - 现代化 React 框架
-- **TypeScript** - 类型安全的 JavaScript
-- **Next.js 14** - 全栈 React 框架
-- **Ant Design 5** - 企业级 UI 组件库
-- **Tailwind CSS** - 实用程序优先的 CSS 框架
-
-### 后端
-
-- **Node.js** - JavaScript 运行时
-- **MySQL** - 可靠的关系型数据库
-- **Next.js API Routes** - 服务端 API
-
-### 开发工具
-
-- **ESLint** - 代码规范检查
-- **PostCSS** - CSS 后处理器
-- **TypeScript** - 静态类型检查
+- **前端**：Next.js 14（App Router）· React 18 · TypeScript · Ant Design 5 · Tailwind CSS
+- **后端**：Next.js API Routes · MySQL（mysql2）
+- **日志**：Pino（开发态彩色输出）
 
 ## 快速开始
 
-### 环境要求
-
-- Node.js 18+
-- npm 或 yarn
-- MySQL 8.0+
-
-### 安装步骤
-
-1. **克隆项目**
-
-```bash
-git clone <your-repo-url>
-cd crm-system
-```
-
-2. **安装依赖**
+1. 安装依赖
 
 ```bash
 npm install
 ```
 
-3. **配置数据库**
+2. 配置环境变量（创建 `.env.local`）
 
-   选择以下任一方式：
+```bash
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=你的用户名
+DB_PASSWORD=你的密码
+DB_NAME=你的数据库名
+# 可选：LOG_LEVEL=debug|info|warn|error（默认开发态为 debug）
+```
 
-   - **本地安装**：按照 [MYSQL_SETUP.md](./MYSQL_SETUP.md) 指南在本地安装 MySQL
-
-4. **初始化数据库**
+3. 初始化数据库（建表并插入示例数据）
 
 ```bash
 npm run db:setup
 ```
 
-5. **启动开发服务器**
+4. 启动开发服务
 
 ```bash
 npm run dev
+# 访问 http://localhost:3000
 ```
 
-6. **访问应用**
-   打开浏览器访问 [http://localhost:3000](http://localhost:3000)
+## 常用命令
 
-## 项目结构
+- `npm run dev`：启动开发环境
+- `npm run build`：构建生产包
+- `npm start`：启动生产服务
+- `npm run lint`：代码检查
+- `npm run db:setup`：初始化数据库（按 `src/lib/database/schema_qft_ai.sql`）并插入示例数据
+- `npm run logs` / `logs:list` / `logs:tail` / `logs:error`：查看日志
+
+## 目录概览
 
 ```
-crm-system/
-├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── api/               # API路由
-│   │   │   ├── customers/     # 客户相关API
-│   │   │   ├── appointments/  # 预约相关API
-│   │   │   └── stats/         # 统计数据API
-│   │   ├── customers/         # 客户管理页面
-│   │   ├── appointments/      # 预约管理页面
-│   │   └── page.tsx          # 首页
-│   ├── components/            # 公共组件
-│   │   ├── layout/           # 布局组件
-│   │   └── ui/               # UI组件
-│   ├── lib/                  # 工具库
-│   │   └── database/         # 数据库相关
-│   ├── types/                # TypeScript类型定义
-│   └── utils/                # 工具函数
-├── scripts/                  # 脚本文件
-│   └── setup-database.js    # 数据库初始化脚本
-├── data/                     # 数据库文件目录
-└── public/                   # 静态资源
+agent-crm/
+├─ src/
+│  ├─ app/
+│  │  ├─ api/                # 服务端接口（客户、带看记录、外部查询、日志等）
+│  │  ├─ customers/          # 客户管理页面
+│  │  └─ viewing-records/    # 带看记录页面
+│  ├─ components/            # 组件（含小区联想输入等）
+│  ├─ lib/                   # 数据库与日志
+│  └─ utils/                 # 工具与常量
+├─ scripts/                  # 脚本（数据库初始化等）
+├─ docs/                     # 详细接口与使用说明
+└─ logs/                     # 运行日志
 ```
 
-## 数据库设计
+## 文档
 
-### 客户表 (customers)
-
-- 基本信息：姓名、手机号、微信等
-- 需求信息：业务类型、房型、价格区间等
-- 状态管理：跟进状态、来源渠道等
-- 统计字段：佣金总和、带看次数等
-
-### 带看记录表 (viewing_records)
-
-- 关联客户 ID
-- 带看详情：带看人、状态、反馈等
-- 佣金信息
-
-### 预约表 (appointments)
-
-- 预约详情：物业信息、客户信息、经纪人等
-- 时间管理：预约时间、状态等
-- 转化标记：是否已转化为带看记录
-
-## 可用脚本
-
-- `npm run dev` - 启动开发服务器
-- `npm run build` - 构建生产版本
-- `npm start` - 启动生产服务器
-- `npm run lint` - 运行代码检查
-- `npm run db:setup` - 初始化数据库
-
-## 主要功能页面
-
-### 首页 (/)
-
-- 业务数据概览
-- 关键指标统计
-- 快速操作入口
-
-### 客户管理 (/customers)
-
-- 客户列表展示
-- 多维度筛选
-- 客户详情查看
-- 操作管理（查看、编辑、添加带看）
-
-### 预约带看 (/appointments)
-
-- 预约列表管理
-- 状态流转
-- 城市筛选
-- 数据转化
-
-## 开发指南
-
-### 数据流转
-
-1. **预约创建** → 状态为"待确认"
-2. **预约确认** → 状态变为"已确认"
-3. **预约完成** → 状态变为"已完成"，可转化为带看记录
-4. **数据转化** → 在客户管理中生成对应的带看记录
-
-### API 设计
-
-- RESTful API 设计
-- 统一的响应格式
-- 完整的错误处理
-- 类型安全的接口定义
-
-### 代码规范
-
-- TypeScript 严格模式
-- ESLint 代码检查
-- 组件化开发
-- 响应式设计
+- 外部 Agent 接口与查询：`docs/外部Agent接口文档.md`、`docs/外部Agent查询接口文档.md`、`docs/外部查询接口快速参考.md`
+- 带看记录录入 API：`docs/带看记录录入接口API文档.md`
+- 日志与错误处理：`docs/logging-guide.md`、`docs/api-error-handling.md`
+- 数据表一览：`docs/数据表.md`
+- 部署：`docs/DEPLOYMENT.md`
 
 ## 许可证
 
 MIT License
-
-## 联系方式
-
-如有问题或建议，请通过以下方式联系：
-
-- 提交 GitHub Issue
-- 发送邮件至开发团队
-
----
-
-_构建于 2024 年，专为房产中介业务优化设计_

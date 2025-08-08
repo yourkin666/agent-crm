@@ -2,16 +2,22 @@
 
 import React, { useState, useCallback } from 'react';
 import {
-  Modal, Form, Input, Select, Row, Col, InputNumber, message, DatePicker, Spin, AutoComplete
+  Modal, Form, Input, Select, Row, Col, InputNumber, DatePicker, Spin, AutoComplete, App
 } from 'antd';
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import { Customer } from '@/types';
 import {
   BUSINESS_TYPE_TEXT_BY_STRING, ROOM_TYPE_TEXT_BY_STRING, 
   ROOM_TAG_TEXT_BY_STRING, VIEWER_TYPE_TEXT_BY_STRING,
-  VIEWING_STATUS_TEXT, VIEWING_FEEDBACK_TEXT
+  VIEWING_STATUS_TEXT
 } from '@/utils/constants';
 import CommunityAutoComplete from './CommunityAutoComplete';
+
+interface CommunityOption {
+  value: string;
+  label: string;
+  propertyAddrId: number;
+}
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -26,15 +32,35 @@ interface AddViewingModalProps {
 interface DetailAddressOption {
   value: string;
   label: string;
-  data: any; // 保存完整的详细地址数据
+  data: Record<string, unknown>; // 保存完整的详细地址数据
 }
 
-export default function AddViewingModal({ visible, customer, onCancel, onSuccess }: AddViewingModalProps) {
+export default function AddViewingModal(props: AddViewingModalProps) {
+  const { customer } = props;
+  if (!customer) return null;
+  return <AddViewingModalInner {...props} customer={customer} />;
+}
+
+interface AddViewingInnerProps {
+  visible: boolean;
+  customer: Customer; // 非空
+  onCancel: () => void;
+  onSuccess: () => void;
+}
+
+function AddViewingModalInner({ visible, customer, onCancel, onSuccess }: AddViewingInnerProps) {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [detailAddressOptions, setDetailAddressOptions] = useState<DetailAddressOption[]>([]);
   const [detailAddressLoading, setDetailAddressLoading] = useState(false);
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
+  const { message } = App.useApp();
+
+  const toISOString = (value?: Dayjs | null): string => {
+    if (!value) return new Date().toISOString();
+    const d = value.toDate();
+    return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  };
 
   // 获取详细地址列表并自动填充
   const fetchDetailAddresses = useCallback(async (propertyAddrId: number) => {
@@ -42,7 +68,6 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
 
     setDetailAddressLoading(true);
     try {
-      console.log('获取详细地址，propertyAddrId:', propertyAddrId);
       const response = await fetch(`/api/property/${propertyAddrId}`, {
         method: 'GET',
         headers: {
@@ -52,90 +77,61 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
 
       if (response.ok) {
         const result = await response.json();
-        
-        // 处理返回的数据
-        let detailAddressList = [];
+        let detailAddressList: Array<{ detailAddr: string }> = [];
         if (result.success && result.data) {
-          // 如果是外部接口成功返回的数据（新分页格式）
           if (result.data.code === 200 && result.data.data && Array.isArray(result.data.data.list)) {
-            detailAddressList = result.data.data.list;
-            console.log('使用外部接口详细地址数据（分页格式）');
-          }
-          // 如果是外部接口成功返回的数据（直接数组格式）
-          else if (result.data.code === 200 && Array.isArray(result.data.data)) {
-            detailAddressList = result.data.data;
-            console.log('使用外部接口详细地址数据（数组格式）');
-          }
-          // 如果是模拟数据（新分页格式）
-          else if (result.isMockData && result.data.data && Array.isArray(result.data.data.list)) {
-            detailAddressList = result.data.data.list;
-            console.log('使用模拟详细地址数据（分页格式）');
-          }
-          // 如果是模拟数据（直接数组格式）
-          else if (result.isMockData && Array.isArray(result.data.data)) {
-            detailAddressList = result.data.data;
-            console.log('使用模拟详细地址数据（数组格式）');
+            detailAddressList = result.data.data.list as Array<{ detailAddr: string }>;
+          } else if (result.data.code === 200 && Array.isArray(result.data.data)) {
+            detailAddressList = result.data.data as Array<{ detailAddr: string }>;
+          } else if (result.isMockData && result.data.data && Array.isArray(result.data.data.list)) {
+            detailAddressList = result.data.data.list as Array<{ detailAddr: string }>;
+          } else if (result.isMockData && Array.isArray(result.data.data)) {
+            detailAddressList = result.data.data as Array<{ detailAddr: string }>;
           }
         }
 
-        console.log('详细地址数据加载成功:', detailAddressList.length, '条记录');
-        
-        // 自动填充详细地址 - 可以是第一个地址或者组合显示
         if (detailAddressList.length > 0) {
-          // 自动选择第一个详细地址
           const firstAddress = detailAddressList[0];
           form.setFieldsValue({ 
             property_address: firstAddress.detailAddr 
           });
-          
-          // 创建地址选项供后续可能的手动修改
-          const addressOptions: DetailAddressOption[] = detailAddressList.map((item: any) => ({
-            value: item.detailAddr,
-            label: item.detailAddr,
+          const addressOptions: DetailAddressOption[] = detailAddressList.map((item: Record<string, unknown>) => ({
+            value: item.detailAddr as string,
+            label: item.detailAddr as string,
             data: item,
           }));
           setDetailAddressOptions(addressOptions);
-          
-          console.log('已自动填充详细地址:', firstAddress.detailAddr);
         } else {
           form.setFieldsValue({ property_address: '暂无详细地址信息' });
           setDetailAddressOptions([]);
         }
       } else {
-        console.error('获取详细地址数据失败:', response.statusText);
         message.error('获取详细地址失败');
         setDetailAddressOptions([]);
         form.setFieldsValue({ property_address: undefined });
       }
-    } catch (error) {
-      console.error('获取详细地址接口调用失败:', error);
+    } catch {
       message.error('获取详细地址失败');
       setDetailAddressOptions([]);
       form.setFieldsValue({ property_address: undefined });
     } finally {
       setDetailAddressLoading(false);
     }
-  }, [form]);
+  }, [form, message]);
 
   // 处理物业地址选择变化
-  const handlePropertyChange = useCallback((value: string, selectedOption?: any) => {
-    console.log('物业地址变化:', value, selectedOption);
-    
+  const handlePropertyChange = useCallback((value: string, selectedOption?: CommunityOption) => {
     if (selectedOption && selectedOption.propertyAddrId) {
       setSelectedPropertyId(selectedOption.propertyAddrId);
-      // 获取对应的详细地址
       fetchDetailAddresses(selectedOption.propertyAddrId);
     } else {
-      // 手动输入或清空时，清除详细地址选项
       setSelectedPropertyId(null);
       setDetailAddressOptions([]);
       form.setFieldsValue({ property_address: undefined });
     }
   }, [fetchDetailAddresses, form]);
 
-  const handleSubmit = async (values: any) => {
-    if (!customer) return;
-
+  const handleSubmit = async (values: Record<string, unknown>) => {
     setLoading(true);
     try {
       const response = await fetch('/api/viewing-records', {
@@ -146,13 +142,13 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
         body: JSON.stringify({
           customer_id: customer.id,
           ...values,
-          viewing_time: values.viewing_time ? values.viewing_time.toISOString() : new Date().toISOString(),
+          viewing_time: toISOString(values.viewing_time as Dayjs | null),
         }),
       });
 
       const result = await response.json();
 
-      if (result.success) {
+      if (response.ok && result.success) {
         message.success('带看记录添加成功');
         form.resetFields();
         onSuccess();
@@ -160,8 +156,7 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
       } else {
         message.error(result.error || '添加带看记录失败');
       }
-    } catch (error) {
-      console.error('添加带看记录失败:', error);
+    } catch {
       message.error('网络请求失败');
     } finally {
       setLoading(false);
@@ -170,14 +165,11 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
 
   const handleCancel = () => {
     form.resetFields();
-    // 清理状态
     setDetailAddressOptions([]);
     setSelectedPropertyId(null);
     setDetailAddressLoading(false);
     onCancel();
   };
-
-  if (!customer) return null;
 
   return (
     <Modal
@@ -187,7 +179,7 @@ export default function AddViewingModal({ visible, customer, onCancel, onSuccess
       onOk={() => form.submit()}
       confirmLoading={loading}
       width={600}
-      destroyOnHidden
+      destroyOnClose
     >
       <Form
         form={form}

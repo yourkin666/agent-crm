@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-    Table, Button, Space, Tag, Input, Select, Form, Row, Col,
+    Table, Button, Space, Tag, Input, Form, Row, Col,
     Card, Statistic, message, Pagination
 } from 'antd';
 import {
@@ -19,11 +19,11 @@ import AdvancedFilterModal from '@/components/customers/AdvancedFilterModal';
 import { Customer, CustomerFilterParams, ApiResponse, PaginatedResponse } from '@/types';
 import {
     CUSTOMER_STATUS_TEXT, CUSTOMER_STATUS_COLOR, SOURCE_CHANNEL_TEXT,
-    BUSINESS_TYPE_TEXT, DEFAULT_PAGE_SIZE
+    DEFAULT_PAGE_SIZE
 } from '@/utils/constants';
-import { formatPhone, formatDate, formatMoney, formatRequirement, formatBusinessTypes, formatRoomTypesDisplay, formatPriceRange } from '@/utils/helpers';
+import { formatPhone, formatDate, formatMoney, formatBusinessTypes, formatRoomTypesDisplay } from '@/utils/helpers';
 
-const { Option } = Select;
+
 
 export default function CustomersPage() {
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -53,7 +53,7 @@ export default function CustomersPage() {
     const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(null);
 
     // 加载客户数据
-    const loadCustomers = async (params?: Partial<CustomerFilterParams>) => {
+    const loadCustomers = useCallback(async (params?: Partial<CustomerFilterParams>) => {
         setLoading(true);
         try {
             const searchParams = new URLSearchParams();
@@ -91,7 +91,7 @@ export default function CustomersPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [filters]);
 
     // 处理高级筛选
     const handleAdvancedFilter = (advancedFilters: Partial<CustomerFilterParams>) => {
@@ -100,7 +100,7 @@ export default function CustomersPage() {
             ...advancedFilters,
             page: 1, // 重置到第一页
         };
-        setFilters(newFilters);
+        setFilters(newFilters as unknown as CustomerFilterParams);
         loadCustomers(newFilters);
     };
 
@@ -110,17 +110,17 @@ export default function CustomersPage() {
     };
 
     // 移除单个筛选条件
-    const removeFilter = (filterKey: string, value?: any) => {
+    const removeFilter = (filterKey: string, value?: unknown) => {
         const newFilters = { ...filters };
         
         if (value !== undefined && Array.isArray(newFilters[filterKey as keyof CustomerFilterParams])) {
             // 数组类型的筛选条件，移除特定值
-            const currentArray = newFilters[filterKey as keyof CustomerFilterParams] as any[];
+            const currentArray = newFilters[filterKey as keyof CustomerFilterParams] as unknown[];
             const newArray = currentArray.filter(item => item !== value);
             if (newArray.length === 0) {
                 delete newFilters[filterKey as keyof CustomerFilterParams];
             } else {
-                (newFilters as any)[filterKey] = newArray;
+                (newFilters as Record<string, unknown>)[filterKey] = newArray;
             }
         } else {
             // 非数组类型的筛选条件，直接删除
@@ -128,20 +128,20 @@ export default function CustomersPage() {
         }
         
         newFilters.page = 1; // 重置到第一页
-        setFilters(newFilters);
+        setFilters(newFilters as CustomerFilterParams);
         loadCustomers(newFilters);
     };
 
     useEffect(() => {
         loadCustomers();
-    }, []);
+    }, [loadCustomers]);
 
     // 搜索处理
-    const handleSearch = (values: any) => {
-        const searchText = values.searchText?.trim();
+    const handleSearch = (values: Record<string, unknown>) => {
+        const searchText = (values.searchText as string)?.trim();
         
         // 构建新的筛选条件
-        const newFilters: any = {
+        const newFilters: Record<string, unknown> = {
             ...filters,
             page: 1, // 重置到第一页
         };
@@ -163,7 +163,7 @@ export default function CustomersPage() {
             }
         }
 
-        setFilters(newFilters);
+        setFilters(newFilters as unknown as CustomerFilterParams);
         loadCustomers(newFilters);
     };
 
@@ -174,7 +174,7 @@ export default function CustomersPage() {
             page: 1,
             pageSize: DEFAULT_PAGE_SIZE,
         };
-        setFilters(newFilters);
+        setFilters(newFilters as unknown as CustomerFilterParams);
         loadCustomers(newFilters);
     };
 
@@ -185,7 +185,7 @@ export default function CustomersPage() {
             page,
             pageSize,
         };
-        setFilters(newFilters);
+        setFilters(newFilters as unknown as CustomerFilterParams);
         loadCustomers(newFilters);
     };
 

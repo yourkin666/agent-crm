@@ -1,6 +1,4 @@
 import mysql from "mysql2/promise";
-import fs from "fs";
-import path from "path";
 import { createModuleLogger, logDatabaseOperation } from "../logger";
 
 // 全局数据库连接池和初始化状态
@@ -47,7 +45,7 @@ async function initializeDatabase() {
     // 可选：验证关键表是否存在
     try {
       const [tables] = await connection.query("SHOW TABLES");
-      dbLogger.info(`发现 ${tables.length} 个数据表`);
+      dbLogger.info(`发现 ${Array.isArray(tables) ? tables.length : 0} 个数据表`);
     } catch (error) {
       dbLogger.warn("无法查看表列表，但连接正常", error);
     }
@@ -87,7 +85,7 @@ export class DatabaseManager {
   }
 
   // 执行查询并返回所有结果
-  async query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+  async query<T = Record<string, unknown>>(sql: string, params: (string | number | boolean)[] = []): Promise<T[]> {
     const startTime = Date.now();
     try {
       const db = await this.ensureDb();
@@ -103,7 +101,7 @@ export class DatabaseManager {
   }
 
   // 执行查询并返回第一个结果
-  async queryOne<T = any>(sql: string, params: any[] = []): Promise<T | null> {
+  async queryOne<T = Record<string, unknown>>(sql: string, params: (string | number | boolean)[] = []): Promise<T | null> {
     const startTime = Date.now();
     try {
       const db = await this.ensureDb();
@@ -121,7 +119,7 @@ export class DatabaseManager {
   // 执行插入/更新/删除操作
   async execute(
     sql: string,
-    params: any[] = []
+    params: (string | number | boolean)[] = []
   ): Promise<{ changes: number; lastInsertRowid: number }> {
     const startTime = Date.now();
     try {
@@ -150,10 +148,10 @@ export class DatabaseManager {
 
     // 创建一个临时的数据库管理器，使用同一个连接
     const transactionDbManager = new DatabaseManager();
-    (transactionDbManager as any).pool = {
+    (transactionDbManager as unknown as { pool: unknown }).pool = {
       getConnection: () => Promise.resolve(connection),
-      query: (sql: string, params: any[]) => connection.query(sql, params),
-      execute: (sql: string, params: any[]) => connection.execute(sql, params),
+      query: (sql: string, params: (string | number | boolean)[]) => connection.query(sql, params),
+      execute: (sql: string, params: (string | number | boolean)[]) => connection.execute(sql, params),
     };
 
     try {
@@ -169,10 +167,10 @@ export class DatabaseManager {
   }
 
   // 分页查询助手
-  async queryWithPagination<T = any>(
+  async queryWithPagination<T = Record<string, unknown>>(
     baseQuery: string,
     countQuery: string,
-    params: any[] = [],
+    params: (string | number | boolean)[] = [],
     page: number = 1,
     pageSize: number = 6
   ): Promise<{

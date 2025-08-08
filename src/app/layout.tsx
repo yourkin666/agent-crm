@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider, App as AntApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import 'dayjs/locale/zh-cn';
 import './globals.css';
@@ -56,7 +56,9 @@ export default function RootLayout({
                         theme={antdTheme}
                         componentSize="middle"
                     >
-                        {children}
+                        <AntApp>
+                            {children}
+                        </AntApp>
                     </ConfigProvider>
                 </AntdRegistry>
             </body>

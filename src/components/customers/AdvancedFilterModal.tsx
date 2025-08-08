@@ -1,12 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Form, Select, Tag, Space } from 'antd';
-import { CustomerFilterParams, CustomerStatus, SourceChannel, BusinessType } from '@/types';
+import { Modal, Button, Form, Select, Tag } from 'antd';
+import { CustomerFilterParams } from '@/types';
 import { 
   CUSTOMER_STATUS_TEXT, 
-  SOURCE_CHANNEL_TEXT, 
-  BUSINESS_TYPE_TEXT 
+  SOURCE_CHANNEL_TEXT
 } from '@/utils/constants';
 
 const { Option } = Select;
@@ -91,7 +90,7 @@ export default function AdvancedFilterModal({
     const quickFilter = QUICK_FILTERS.find(f => f.key === quickFilterKey);
     if (!quickFilter) return;
 
-    let newFilters = { ...filters };
+    const newFilters = { ...filters };
     let newSelectedQuickFilters = [...selectedQuickFilters];
 
     if (selectedQuickFilters.includes(quickFilterKey)) {
@@ -108,7 +107,7 @@ export default function AdvancedFilterModal({
       
       // 添加对应的筛选条件
       Object.entries(quickFilter.value).forEach(([key, value]) => {
-        (newFilters as any)[key] = value;
+        (newFilters as Record<string, unknown>)[key] = value;
       });
     }
 
@@ -118,14 +117,14 @@ export default function AdvancedFilterModal({
   };
 
   // 处理表单字段变化
-  const handleFieldChange = (changedFields: any, allFields: any) => {
+  const handleFieldChange = (changedFields: Record<string, unknown>, allFields: Record<string, unknown>) => {
     const newFilters = { ...filters };
     
     Object.entries(allFields).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
-        (newFilters as any)[key] = value;
+        (newFilters as Record<string, unknown>)[key] = value;
       } else {
-        delete (newFilters as any)[key];
+        delete (newFilters as Record<string, unknown>)[key];
       }
     });
     

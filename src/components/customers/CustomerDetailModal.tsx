@@ -12,14 +12,13 @@ import AddViewingModal from './AddViewingModal';
 import EditViewingModal from '../viewing-records/EditViewingModal';
 import {
   CUSTOMER_STATUS_TEXT, CUSTOMER_STATUS_COLOR,
-  SOURCE_CHANNEL_TEXT_BY_STRING, BUSINESS_TYPE_TEXT_BY_STRING,
-  ROOM_TYPE_TEXT_BY_STRING, ROOM_TAG_TEXT_BY_STRING,
-  VIEWER_TYPE_TEXT_BY_STRING, VIEWING_STATUS_TEXT, VIEWING_STATUS_COLOR,
-  VIEWING_FEEDBACK_TEXT, VIEWING_FEEDBACK_COLOR
+  SOURCE_CHANNEL_TEXT_BY_STRING,
+  ROOM_TYPE_TEXT_BY_STRING,
+  VIEWER_TYPE_TEXT_BY_STRING, VIEWING_STATUS_TEXT, VIEWING_STATUS_COLOR
 } from '@/utils/constants';
 import { 
   formatPhone, formatDate, formatMoney,
-  formatBusinessTypes, formatRoomTypesDisplay, formatRoomTags, formatPriceRange
+  formatBusinessTypes, formatRoomTypesDisplay, formatRoomTags
 } from '@/utils/helpers';
 
 interface CustomerDetailModalProps {
@@ -369,7 +368,7 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
         onCancel={onCancel}
         footer={null}
         width={1000}
-        destroyOnHidden
+        destroyOnClose
       >
         <Tabs
           activeKey={currentTab}

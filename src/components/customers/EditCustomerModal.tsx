@@ -5,7 +5,7 @@ import {
   Modal, Form, Input, Select, DatePicker, Row, Col, message
 } from 'antd';
 import {
-  CustomerStatus, SourceChannel, BusinessType, RoomType, RoomTag, LeasePeriod, Customer
+  Customer
 } from '@/types';
 import {
   CUSTOMER_STATUS_TEXT, SOURCE_CHANNEL_TEXT, BUSINESS_TYPE_TEXT,
@@ -47,7 +47,7 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
     }
   }, [visible, customer, form]);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: Record<string, unknown>) => {
     if (!customer) return;
 
     setLoading(true);
@@ -56,7 +56,7 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
       const submitData = {
         ...values,
         id: customer.id,
-        move_in_date: values.move_in_date ? values.move_in_date.format('YYYY-MM-DD') : null,
+        move_in_date: values.move_in_date ? (values.move_in_date as { format: (pattern: string) => string }).format('YYYY-MM-DD') : null,
         // 确保数组字段是正确的格式
         business_type: values.business_type || [],
         room_type: values.room_type || [],
@@ -96,19 +96,19 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
   if (!customer) return null;
 
   return (
-    <Modal
-      title="编辑客户信息"
-      open={visible}
-      onCancel={handleCancel}
-      onOk={() => form.submit()}
-      confirmLoading={loading}
-      width={800}
-      destroyOnHidden
-      styles={{
-        body: { padding: '16px' },
-        header: { paddingBottom: '12px' }
-      }}
-    >
+          <Modal
+        title="编辑客户信息"
+        open={visible}
+        onCancel={handleCancel}
+        onOk={() => form.submit()}
+        confirmLoading={loading}
+        width={800}
+        destroyOnClose
+        styles={{
+          body: { padding: '16px' },
+          header: { paddingBottom: '12px' }
+        }}
+      >
       <Form
         form={form}
         layout="vertical"

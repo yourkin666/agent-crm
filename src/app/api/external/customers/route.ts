@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { dbManager } from '@/lib/database';
-import { withErrorHandler, createDatabaseError, createSuccessResponse, createValidationError } from '@/lib/api-error-handler';
+import { withErrorHandler, createSuccessResponse, createValidationError } from '@/lib/api-error-handler';
 import { createRequestLogger } from '@/lib/logger';
+export const dynamic = 'force-dynamic';
 
 // 生成请求ID的辅助函数
 function generateRequestId(): string {
@@ -9,7 +10,7 @@ function generateRequestId(): string {
 }
 
 // 外部客户数据验证
-function validateExternalCustomerData(data: any): void {
+function validateExternalCustomerData(data: Record<string, unknown>): void {
   // 必填字段验证
   if (!data.userId) {
     throw createValidationError('userId为必填字段');
@@ -89,7 +90,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       }, '客户已存在，将进行更新操作');
 
       // 更新现有客户
-      const result = await dbManager.execute(`
+      await dbManager.execute(`
         UPDATE qft_ai_customers SET 
           botId = COALESCE(?, botId),
           nickname = COALESCE(?, nickname),
@@ -118,61 +119,45 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       ]);
 
       requestLogger.info({
-        statusCode: 200,
-        customerId: existingCustomer.id,
         userId,
-        name: name || existingCustomer.name,
         requestId
-      }, '外部API请求成功完成 - 客户数据更新成功');
+      }, '客户信息更新成功');
+
+      return createSuccessResponse({ id: existingCustomer.id }, '客户信息已更新');
+    }
+
+    // 新增客户
+    const insertSql = `
+      INSERT INTO qft_ai_customers (
+        userId, botId, nickname, name, phone, backup_phone, wechat, status, community,
+        business_type, room_type, room_tags, move_in_date, lease_period, price_range, source_channel, creator, internal_notes,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `;
+
+    const result = await dbManager.execute(insertSql, [
+      userId, botId || null, nickname || null, name || '', phone || null, backup_phone || null, wechat || null, status, community || '',
+      business_type, room_type, room_tags || null, move_in_date || null, lease_period || null, price_range || null, source_channel, creator, internal_notes || null
+    ]);
+
+    if (result.lastInsertRowid) {
+      requestLogger.info({
+        statusCode: 201,
+        customerId: result.lastInsertRowid,
+        userId,
+        name,
+        requestId
+      }, '外部API请求成功完成 - 新客户创建成功');
 
       return createSuccessResponse(
         { 
-          id: existingCustomer.id, 
+          id: result.lastInsertRowid, 
           userId,
-          action: 'updated'
+          action: 'created'
         },
-        '客户数据更新成功'
+        '新客户创建成功',
+        201
       );
-    } else {
-      requestLogger.debug({
-        userId,
-        requestId
-      }, '客户不存在，将创建新客户');
-
-      // 创建新客户
-      const result = await dbManager.execute(`
-        INSERT INTO qft_ai_customers (
-          userId, botId, nickname, name, phone, backup_phone, wechat,
-          status, community, business_type, room_type, room_tags,
-          move_in_date, lease_period, price_range, source_channel,
-          creator, is_agent, internal_notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `, [
-        userId, botId || null, nickname || null, name || '', phone || null, backup_phone || null, wechat || null,
-        status, community || '', business_type, room_type, room_tags || null,
-        move_in_date || null, lease_period || null, price_range || null, source_channel,
-        creator, 0, internal_notes || null
-      ]);
-
-      if (result.lastInsertRowid) {
-        requestLogger.info({
-          statusCode: 201,
-          customerId: result.lastInsertRowid,
-          userId,
-          name,
-          requestId
-        }, '外部API请求成功完成 - 新客户创建成功');
-
-        return createSuccessResponse(
-          { 
-            id: result.lastInsertRowid, 
-            userId,
-            action: 'created'
-          },
-          '新客户创建成功',
-          201
-        );
-      }
     }
 
   } catch (error) {

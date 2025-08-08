@@ -1,12 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { logUtils } from '@/lib/logger';
 import { createSuccessResponse, createErrorResponse, withErrorHandler } from '@/lib/api-error-handler';
+export const dynamic = 'force-dynamic';
 
 /**
  * 获取日志文件列表和统计信息
  */
 async function handleGetLogs(request: NextRequest) {
-  const url = new URL(request.url);
+  const url = request.nextUrl;
   const action = url.searchParams.get('action');
   const filename = url.searchParams.get('file');
   const lines = parseInt(url.searchParams.get('lines') || '100');

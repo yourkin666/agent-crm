@@ -12,8 +12,7 @@ interface PriceRangeInputProps {
 }
 
 const PriceRangeInput: React.ForwardRefRenderFunction<InputRef, PriceRangeInputProps> = (
-  { value, onChange, placeholder = "最低价格-最高价格", disabled = false },
-  ref
+  { value, onChange, disabled = false }
 ) => {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');

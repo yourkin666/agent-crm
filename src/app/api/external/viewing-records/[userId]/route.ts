@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { dbManager } from '@/lib/database';
-import { withErrorHandler, createDatabaseError, createSuccessResponse, createValidationError } from '@/lib/api-error-handler';
+import { withErrorHandler, createSuccessResponse, createValidationError } from '@/lib/api-error-handler';
 import { createRequestLogger } from '@/lib/logger';
+export const dynamic = 'force-dynamic';
 
 // 生成请求ID的辅助函数
 function generateRequestId(): string {
@@ -21,7 +22,7 @@ export const GET = withErrorHandler(async (request: NextRequest, { params }: { p
   const requestLogger = createRequestLogger(requestId);
 
   const userId = params.userId;
-  const { searchParams } = new URL(request.url);
+  const { searchParams } = request.nextUrl;
 
   // 获取查询参数
   const page = parseInt(searchParams.get('page') || '1', 10);
@@ -58,7 +59,7 @@ export const GET = withErrorHandler(async (request: NextRequest, { params }: { p
   try {
     // 构建WHERE条件
     const whereConditions: string[] = ['userId = ?'];
-    const queryParams: any[] = [userId];
+    const queryParams: (string | number | boolean)[] = [userId];
 
     if (property_name) {
       whereConditions.push('property_name LIKE ?');
@@ -95,7 +96,7 @@ export const GET = withErrorHandler(async (request: NextRequest, { params }: { p
     // 查询总数
     const countQuery = `SELECT COUNT(*) as total FROM qft_ai_viewing_records ${whereClause}`;
     const countResult = await dbManager.queryOne(countQuery, queryParams);
-    const total = countResult?.total || 0;
+    const total = Number(countResult?.total || 0);
 
     requestLogger.debug({
       userId,
@@ -153,61 +154,27 @@ export const GET = withErrorHandler(async (request: NextRequest, { params }: { p
     const dataParams = [...queryParams, pageSize, offset];
     const records = await dbManager.query(dataQuery, dataParams);
 
-    // 查询用户基本信息（如果存在客户记录）
-    let customerInfo = null;
-    if (records.length > 0 && records[0].customer_id) {
-      customerInfo = await dbManager.queryOne(`
-        SELECT 
-          id,
-          userId,
-          nickname,
-          name,
-          phone,
-          community,
-          business_type,
-          room_type,
-          status,
-          source_channel,
-          viewing_count,
-          total_commission,
-          created_at,
-          updated_at
-        FROM qft_ai_customers 
-        WHERE userId = ?
-      `, [userId]);
-    }
-
     requestLogger.info({
-      statusCode: 200,
       userId,
       total,
       returnedCount: records.length,
-      page,
-      pageSize,
-      hasCustomerInfo: !!customerInfo,
       requestId
-    }, '外部API请求成功完成 - 用户带看记录查询成功');
+    }, '用户带看记录查询完成');
 
     return createSuccessResponse({
-      viewing_records: records,
-      customer_info: customerInfo,
-      pagination: {
-        total,
-        page,
-        pageSize,
-        totalPages: Math.ceil(total / pageSize)
-      },
-      userId
-    }, `查询成功，找到${total}条带看记录`);
-
+      data: records,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize)
+    });
   } catch (error) {
     requestLogger.error({
       error: error instanceof Error ? error.message : error,
-      stack: error instanceof Error ? error.stack : undefined,
       userId,
       requestId
-    }, '外部API请求失败 - 用户带看记录查询失败');
+    }, '用户带看记录查询失败');
 
-    throw error; // 重新抛出错误让错误处理器处理
+    throw error;
   }
 }); 

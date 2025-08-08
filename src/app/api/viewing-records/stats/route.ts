@@ -2,21 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { dbManager } from '@/lib/database';
 import { withErrorHandler, createDatabaseError } from '@/lib/api-error-handler';
 import { createRequestLogger } from '@/lib/logger';
+export const dynamic = 'force-dynamic';
 
 // 生成请求ID的辅助函数
 function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-interface ViewingRecordStatsFilters {
-  customer_name?: string;
-  property_name?: string;
-  viewing_status?: string;
-  business_type?: string;
-  viewer_name?: string;
-  date_from?: string;
-  date_to?: string;
-}
+
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
   const requestId = generateRequestId();
@@ -29,7 +22,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     requestId
   }, 'API请求开始 - 获取带看记录统计');
 
-  const { searchParams } = new URL(request.url);
+  const { searchParams } = request.nextUrl;
   
   // 解析查询参数（支持筛选条件下的统计）
   const customer_name = searchParams.get('customer_name') || '';
@@ -43,7 +36,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   try {
     // 构建WHERE条件（与列表接口保持一致）
     const whereConditions: string[] = [];
-    const queryParams: any[] = [];
+    const queryParams: (string | number | boolean)[] = [];
 
     if (customer_name) {
       whereConditions.push('customer_name LIKE ?');
@@ -106,7 +99,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
         total_records: stats?.total_records || 0,
         completed_records: stats?.completed_records || 0,
         pending_records: stats?.pending_records || 0,
-        total_commission: parseFloat(stats?.total_commission || 0)
+        total_commission: parseFloat(String(stats?.total_commission || 0))
       }
     });
 

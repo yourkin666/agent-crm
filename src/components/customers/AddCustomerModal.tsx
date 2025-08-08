@@ -5,7 +5,7 @@ import {
   Modal, Form, Input, Select, DatePicker, Row, Col, message
 } from 'antd';
 import {
-  CustomerStatus, SourceChannel, BusinessType, RoomType, RoomTag, LeasePeriod
+  CustomerStatus
 } from '@/types';
 import {
   CUSTOMER_STATUS_TEXT, SOURCE_CHANNEL_TEXT, BUSINESS_TYPE_TEXT,
@@ -26,7 +26,7 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: Record<string, unknown>) => {
     setLoading(true);
     try {
       // 处理数据格式
@@ -79,7 +79,7 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
       onOk={() => form.submit()}
       confirmLoading={loading}
       width={800}
-      destroyOnHidden
+      destroyOnClose
     >
       <Form
         form={form}

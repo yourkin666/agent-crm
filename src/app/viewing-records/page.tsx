@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Table, Button, Space, Tag, Input, Select, Form, Row, Col,
-    Card, Statistic, message, Pagination, DatePicker
+    Card, Statistic, message, Pagination
 } from 'antd';
 import {
-    PlusOutlined, SearchOutlined, EyeOutlined,
+    SearchOutlined, EyeOutlined,
     EditOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -16,14 +16,12 @@ import EditViewingModal from '@/components/viewing-records/EditViewingModal';
 import { ViewingRecord, ApiResponse, PaginatedResponse, ViewingRecordStats } from '@/types';
 import {
     VIEWING_STATUS_TEXT, VIEWING_STATUS_COLOR, BUSINESS_TYPE_TEXT,
-    VIEWER_TYPE_TEXT_BY_STRING, VIEWING_FEEDBACK_TEXT, DEFAULT_PAGE_SIZE,
+    VIEWER_TYPE_TEXT_BY_STRING, DEFAULT_PAGE_SIZE,
     ROOM_TYPE_TEXT_BY_STRING, ROOM_TAG_TEXT_BY_STRING
 } from '@/utils/constants';
 import { formatDate, formatMoney } from '@/utils/helpers';
-import dayjs from 'dayjs';
 
 const { Option } = Select;
-const { RangePicker } = DatePicker;
 
 interface ViewingRecordFilterParams {
     page?: number;
@@ -69,7 +67,7 @@ export default function ViewingRecordsPage() {
     const [selectedRecord, setSelectedRecord] = useState<ViewingRecord | null>(null);
 
     // 获取统计数据
-    const fetchViewingStats = async (params: ViewingRecordFilterParams = {}) => {
+    const fetchViewingStats = useCallback(async (params: ViewingRecordFilterParams = {}) => {
         setStatsLoading(true);
         try {
             const queryParams = new URLSearchParams();
@@ -93,10 +91,10 @@ export default function ViewingRecordsPage() {
         } finally {
             setStatsLoading(false);
         }
-    };
+    }, [filters]);
 
     // 获取带看记录数据
-    const fetchViewingRecords = async (params: ViewingRecordFilterParams = {}) => {
+    const fetchViewingRecords = useCallback(async (params: ViewingRecordFilterParams = {}) => {
         setLoading(true);
         try {
             const queryParams = new URLSearchParams();
@@ -116,6 +114,7 @@ export default function ViewingRecordsPage() {
                     ...prev,
                     current: data.page,
                     total: data.total,
+                    pageSize: data.pageSize,
                 }));
             } else {
                 message.error(result.error || '获取带看记录失败');
@@ -126,7 +125,7 @@ export default function ViewingRecordsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [filters]);
 
     // 获取单个带看记录详情
     const fetchViewingRecordDetail = async (id: number) => {
@@ -148,7 +147,7 @@ export default function ViewingRecordsPage() {
     };
 
     // 搜索处理
-    const handleSearch = (values: any) => {
+    const handleSearch = (values: Record<string, unknown>) => {
         const newFilters = {
             ...filters,
             ...values,
@@ -178,6 +177,12 @@ export default function ViewingRecordsPage() {
             page,
             pageSize: pageSize || DEFAULT_PAGE_SIZE,
         };
+        // 先本地更新分页，提升视觉一致性
+        setPagination(prev => ({
+            ...prev,
+            current: page,
+            pageSize: pageSize || prev.pageSize,
+        }));
         setFilters(newFilters);
         fetchViewingRecords(newFilters);
         // 分页不需要重新获取统计数据，因为统计数据与页码无关
@@ -343,7 +348,7 @@ export default function ViewingRecordsPage() {
     useEffect(() => {
         fetchViewingRecords();
         fetchViewingStats();
-    }, []);
+    }, [fetchViewingRecords, fetchViewingStats]);
 
     return (
         <MainLayout>

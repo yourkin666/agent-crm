@@ -1,7 +1,12 @@
 'use client';
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { AutoComplete, Spin } from 'antd';
+
+interface PropertyItem {
+  propertyAddr: string;
+  propertyAddrId: number;
+}
 
 interface CommunityOption {
   value: string;
@@ -29,8 +34,8 @@ export default function CommunityAutoComplete({
   // 添加请求控制器来避免竞态条件
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // 根据关键词搜索物业地址
-  const fetchPropertyAddresses = async (keyword: string) => {
+  // 根据关键词搜索物业地址（使用 useCallback 保持引用稳定）
+  const fetchPropertyAddresses = useCallback(async (keyword: string) => {
     if (!keyword.trim()) {
       setOptions([]);
       setLastSearchKeyword('');
@@ -96,15 +101,15 @@ export default function CommunityAutoComplete({
         }
 
         // 对数据进行去重处理，避免重复的地址名称导致key冲突
-        const uniquePropertyMap = new Map<string, any>();
-        propertyList.forEach((item: any) => {
+        const uniquePropertyMap = new Map<string, PropertyItem>();
+        propertyList.forEach((item: PropertyItem) => {
           const addr = item.propertyAddr?.trim();
           if (addr && !uniquePropertyMap.has(addr)) {
             uniquePropertyMap.set(addr, item);
           }
         });
 
-        const propertyOptions: CommunityOption[] = Array.from(uniquePropertyMap.values()).map((item: any) => ({
+        const propertyOptions: CommunityOption[] = Array.from(uniquePropertyMap.values()).map((item: PropertyItem) => ({
           // 使用地址名称作为value和label，但现在已经去重了
           value: item.propertyAddr,
           label: item.propertyAddr,
@@ -123,8 +128,8 @@ export default function CommunityAutoComplete({
           setOptions([]);
         }
       }
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') {
         console.log('搜索请求被主动取消:', keyword);
       } else {
         console.error('物业地址搜索接口调用失败:', error);
@@ -137,7 +142,7 @@ export default function CommunityAutoComplete({
         setLoading(false);
       }
     }
-  };
+  }, [lastSearchKeyword]);
 
   // 使用防抖优化接口调用
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -155,7 +160,7 @@ export default function CommunityAutoComplete({
     debounceTimer.current = setTimeout(() => {
       fetchPropertyAddresses(searchText);
     }, 300);
-  }, []);
+  }, [fetchPropertyAddresses]);
 
   const handleSelect = (selectedValue: string) => {
     console.log('选择了:', selectedValue);

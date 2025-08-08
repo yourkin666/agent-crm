@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const keyword = searchParams.get('keyword');
     const limit = searchParams.get('limit') || '100';
     
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
     console.error('物业地址查询接口调用失败:', error);
     
     // 如果外部接口失败，返回一些模拟数据作为备用
-    const keyword = new URL(request.url).searchParams.get('keyword') || '';
+    const keyword = request.nextUrl.searchParams.get('keyword') || '';
     
     // 模拟数据，根据关键词筛选
     const allMockData = [
@@ -69,7 +70,7 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const limit = parseInt(new URL(request.url).searchParams.get('limit') || '100');
+    const limit = parseInt(request.nextUrl.searchParams.get('limit') || '100');
     filteredData = filteredData.slice(0, limit);
     
     const mockData = {

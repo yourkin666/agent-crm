@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dbManager } from '../../../../lib/database';
 import { createDatabaseError, createValidationError, createNotFoundError, withErrorHandler } from '../../../../lib/api-error-handler';
+import { ErrorWithStatusCode } from '../../../../types';
 import { createRequestLogger } from '../../../../lib/logger';
 import { parseBusinessTypes, parseRoomTypes, parseRoomTags } from '../../../../utils/helpers';
 
@@ -37,9 +38,9 @@ export const GET = withErrorHandler(async (
 
     const formattedCustomer = {
       ...customer,
-      business_type: parseBusinessTypes(customer.business_type),
-      room_type: parseRoomTypes(customer.room_type),
-      room_tags: parseRoomTags(customer.room_tags),
+      business_type: parseBusinessTypes(customer.business_type as string),
+      room_type: parseRoomTypes(customer.room_type as string),
+      room_tags: parseRoomTags(customer.room_tags as string),
       is_agent: Boolean(customer.is_agent),
     };
 
@@ -54,7 +55,7 @@ export const GET = withErrorHandler(async (
     });
 
   } catch (error) {
-    if (error instanceof Error && (error as any).statusCode) {
+    if (error instanceof Error && (error as ErrorWithStatusCode).statusCode) {
       throw error;
     }
     throw createDatabaseError('获取客户信息失败', error as Error);
@@ -162,11 +163,15 @@ export const PUT = withErrorHandler(async (
       [customerId]
     );
 
+    if (!updatedCustomer) {
+      throw createNotFoundError('更新后的客户信息');
+    }
+
     const formattedCustomer = {
       ...updatedCustomer,
-      business_type: parseBusinessTypes(updatedCustomer.business_type),
-      room_type: parseRoomTypes(updatedCustomer.room_type),
-      room_tags: parseRoomTags(updatedCustomer.room_tags),
+      business_type: parseBusinessTypes(updatedCustomer.business_type as string),
+      room_type: parseRoomTypes(updatedCustomer.room_type as string),
+      room_tags: parseRoomTags(updatedCustomer.room_tags as string),
       is_agent: Boolean(updatedCustomer.is_agent),
     };
 
@@ -182,7 +187,7 @@ export const PUT = withErrorHandler(async (
     });
 
   } catch (error) {
-    if (error instanceof Error && (error as any).statusCode) {
+    if (error instanceof Error && (error as ErrorWithStatusCode).statusCode) {
       throw error;
     }
     throw createDatabaseError('更新客户信息失败', error as Error);
@@ -242,7 +247,7 @@ export const DELETE = withErrorHandler(async (
     });
 
   } catch (error) {
-    if (error instanceof Error && (error as any).statusCode) {
+    if (error instanceof Error && (error as ErrorWithStatusCode).statusCode) {
       throw error;
     }
     throw createDatabaseError('删除客户失败', error as Error);

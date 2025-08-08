@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dbManager } from '@/lib/database';
-import { withErrorHandler, createDatabaseError, createSuccessResponse, createNotFoundError } from '@/lib/api-error-handler';
+import { withErrorHandler, createDatabaseError, createNotFoundError } from '@/lib/api-error-handler';
 import { createRequestLogger } from '@/lib/logger';
 import { validateViewingRecordData } from '@/lib/validation';
+export const dynamic = 'force-dynamic';
 
 // 生成请求ID的辅助函数
 function generateRequestId(): string {
@@ -98,6 +99,14 @@ export const GET = withErrorHandler(async (request: NextRequest, { params }: { p
   }
 });
 
+// 将任意可解析的时间值格式化为 MySQL DATETIME 字符串
+function toMySQLDateTime(input?: string | null): string | null {
+  if (!input) return null;
+  const d = new Date(input);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 // PUT /api/viewing-records/[id] - 更新带看记录
 export const PUT = withErrorHandler(async (request: NextRequest, { params }: { params: { id: string } }) => {
   const requestId = generateRequestId();
@@ -158,66 +167,31 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: { p
       viewing_feedback,
       business_type,
       notes,
-      // 扩展字段
-      userId,
-      botId,
-      housingId,
-      houseAreaId,
-      houseAreaName,
-      cityId,
-      cityName,
-      propertyAddrId,
-      unitType,
-      longitude,
-      latitude,
-      roomId,
-      advisorId,
-      advisorName,
-      companyName,
-      companyAbbreviation,
-      houseTypeId
     } = body;
 
-    requestLogger.debug({
-      recordId: id,
-      requestId
-    }, '开始更新带看记录');
+    // 统一时间格式
+    const formattedViewingTime = viewing_time ? toMySQLDateTime(viewing_time) : null;
 
     // 更新带看记录
-    const result = await dbManager.execute(`
-      UPDATE qft_ai_viewing_records SET 
+    const updateSql = `
+      UPDATE qft_ai_viewing_records SET
         viewing_time = COALESCE(?, viewing_time),
         property_name = COALESCE(?, property_name),
-        property_address = ?,
+        property_address = COALESCE(?, property_address),
         room_type = COALESCE(?, room_type),
-        room_tag = ?,
+        room_tag = COALESCE(?, room_tag),
         viewer_name = COALESCE(?, viewer_name),
         viewing_status = COALESCE(?, viewing_status),
         commission = COALESCE(?, commission),
-        viewing_feedback = ?,
+        viewing_feedback = COALESCE(?, viewing_feedback),
         business_type = COALESCE(?, business_type),
-        notes = ?,
-        userId = ?,
-        botId = ?,
-        housingId = ?,
-        houseAreaId = ?,
-        houseAreaName = ?,
-        cityId = ?,
-        cityName = ?,
-        propertyAddrId = ?,
-        unitType = ?,
-        longitude = ?,
-        latitude = ?,
-        roomId = ?,
-        advisorId = ?,
-        advisorName = ?,
-        companyName = ?,
-        companyAbbreviation = ?,
-        houseTypeId = ?,
+        notes = COALESCE(?, notes),
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [
-      viewing_time ? new Date(viewing_time).toISOString().slice(0, 19).replace('T', ' ') : null,
+    `;
+
+    const paramsArr = [
+      formattedViewingTime,
       property_name || null,
       property_address || null,
       room_type || null,
@@ -225,80 +199,38 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: { p
       viewer_name || null,
       viewing_status || null,
       commission || null,
-      viewing_feedback !== undefined && viewing_feedback !== null ? viewing_feedback : null,
+      viewing_feedback || null,
       business_type || null,
       notes || null,
-      userId || null,
-      botId || null,
-      housingId || null,
-      houseAreaId || null,
-      houseAreaName || null,
-      cityId || null,
-      cityName || null,
-      propertyAddrId || null,
-      unitType || null,
-      longitude || null,
-      latitude || null,
-      roomId || null,
-      advisorId || null,
-      advisorName || null,
-      companyName || null,
-      companyAbbreviation || null,
-      houseTypeId || null,
       id
-    ]);
+    ];
+
+    const result = await dbManager.execute(updateSql, paramsArr);
 
     if (result.changes === 0) {
-      requestLogger.warn({
-        recordId: id,
-        requestId
-      }, '没有记录被更新');
-      throw createNotFoundError('带看记录');
+      throw createDatabaseError('更新带看记录失败');
     }
 
-    // 如果有关联的客户，重新计算客户统计信息
-    if (existingRecord.customer_id) {
-      requestLogger.debug({
-        customerId: existingRecord.customer_id,
-        recordId: id,
-        requestId
-      }, '开始更新客户统计信息');
-
-      await dbManager.execute(`
-        UPDATE qft_ai_customers 
-        SET 
-          viewing_count = (SELECT COUNT(*) FROM qft_ai_viewing_records WHERE customer_id = ?),
-          total_commission = (SELECT COALESCE(SUM(commission), 0) FROM qft_ai_viewing_records WHERE customer_id = ?),
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `, [existingRecord.customer_id, existingRecord.customer_id, existingRecord.customer_id]);
-
-      requestLogger.debug({
-        customerId: existingRecord.customer_id,
-        requestId
-      }, '客户统计信息更新完成');
-    }
+    // 获取更新后的记录
+    const updatedRecord = await dbManager.queryOne('SELECT * FROM qft_ai_viewing_records WHERE id = ?', [id]);
 
     requestLogger.info({
-      statusCode: 200,
       recordId: id,
-      property_name,
-      commission,
       requestId
-    }, 'API请求成功完成 - 带看记录更新成功');
+    }, '带看记录更新成功');
 
-    return createSuccessResponse(
-      { id: parseInt(id) },
-      '带看记录更新成功'
-    );
-
+    return NextResponse.json({
+      success: true,
+      data: updatedRecord,
+      message: '带看记录更新成功'
+    });
   } catch (error) {
     requestLogger.error({
       error: error instanceof Error ? error.message : error,
       recordId: id,
       requestId
-    }, 'API请求失败 - 带看记录更新失败');
+    }, '更新带看记录失败');
 
-    throw error; // 重新抛出错误让错误处理器处理
+    throw createDatabaseError('更新带看记录', error as Error);
   }
 }); 

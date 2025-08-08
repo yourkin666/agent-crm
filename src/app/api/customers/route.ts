@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { dbManager } from '../../../lib/database';
-import { Customer, CustomerFilterParams, ApiResponse, PaginatedResponse, SourceChannel, BusinessType } from '../../../types';
+import { Customer, CustomerFilterParams, PaginatedResponse, CustomerRow } from '../../../types';
 import { parseRoomTags, parseBusinessTypes, parseRoomTypes } from '../../../utils/helpers';
 import { DEFAULT_PAGE_SIZE } from '../../../utils/constants';
 import { 
@@ -13,6 +13,7 @@ import {
 } from '../../../lib/api-error-handler';
 import { validateCustomerData } from '../../../lib/validation';
 import { logApiRequest, businessLogger, createRequestLogger } from '../../../lib/logger';
+export const dynamic = 'force-dynamic';
 
 // 生成请求ID的辅助函数
 function generateRequestId(): string {
@@ -20,7 +21,7 @@ function generateRequestId(): string {
 }
 
 // 辅助函数：解析筛选参数，支持单值和多值
-function parseFilterParam(value: string | null, type: 'string' | 'number' | 'boolean'): any {
+function parseFilterParam(value: string | null, type: 'string' | 'number' | 'boolean'): string | number | boolean | string[] | number[] | boolean[] | undefined {
   if (!value) return undefined;
   
   try {
@@ -57,7 +58,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const startTime = Date.now();
   const requestLogger = createRequestLogger(requestId);
   
-  const { searchParams } = new URL(request.url);
+  const { searchParams } = request.nextUrl;
 
   // 记录请求开始
   requestLogger.info({
@@ -73,15 +74,15 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     pageSize: parseInt(searchParams.get('pageSize') || DEFAULT_PAGE_SIZE.toString()),
     name: searchParams.get('name') || undefined,
     phone: searchParams.get('phone') || undefined,
-    status: parseFilterParam(searchParams.get('status'), 'number'),
-    source_channel: parseFilterParam(searchParams.get('source_channel'), 'string'),
-    business_type: parseFilterParam(searchParams.get('business_type'), 'string'),
+    status: parseFilterParam(searchParams.get('status'), 'number') as CustomerFilterParams['status'],
+    source_channel: parseFilterParam(searchParams.get('source_channel'), 'string') as CustomerFilterParams['source_channel'],
+    business_type: parseFilterParam(searchParams.get('business_type'), 'string') as CustomerFilterParams['business_type'],
     price_min: searchParams.get('price_min') ? parseFloat(searchParams.get('price_min')!) : undefined,
     price_max: searchParams.get('price_max') ? parseFloat(searchParams.get('price_max')!) : undefined,
     community: searchParams.get('community') || undefined,
-    creator: parseFilterParam(searchParams.get('creator'), 'string'),
-    is_agent: parseFilterParam(searchParams.get('is_agent'), 'boolean'),
-    city: parseFilterParam(searchParams.get('city'), 'string'),
+    creator: parseFilterParam(searchParams.get('creator'), 'string') as CustomerFilterParams['creator'],
+    is_agent: parseFilterParam(searchParams.get('is_agent'), 'boolean') as CustomerFilterParams['is_agent'],
+    city: parseFilterParam(searchParams.get('city'), 'string') as CustomerFilterParams['city'],
     move_in_days: searchParams.get('move_in_days') ? parseInt(searchParams.get('move_in_days')!) : undefined,
     viewing_today: searchParams.get('viewing_today') === 'true',
     my_entries: searchParams.get('my_entries') === 'true',
@@ -94,7 +95,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
   // 构建 WHERE 条件
   const conditions: string[] = [];
-  const params: any[] = [];
+  const params: (string | number | boolean)[] = [];
 
   if (filters.name) {
     conditions.push('name LIKE ?');
@@ -258,7 +259,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     }, '开始执行数据库查询');
 
     // 使用分页查询助手
-    const result = await dbManager.queryWithPagination<any>(
+    const result = await dbManager.queryWithPagination<CustomerRow>(
       baseQuery,
       countQuery,
       params,
@@ -273,11 +274,11 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     );
 
     // 处理客户数据
-    const customers: Customer[] = result.data.map((row: any) => ({
+    const customers: Customer[] = result.data.map((row: CustomerRow) => ({
       ...row,
       business_type: parseBusinessTypes(row.business_type),
       room_type: parseRoomTypes(row.room_type),
-      room_tags: parseRoomTags(row.room_tags),
+      room_tags: parseRoomTags(row.room_tags || null),
       is_agent: Boolean(row.is_agent),
     }));
 
@@ -417,7 +418,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
 
     if (result.changes > 0) {
       // 获取新插入的客户信息
-      const newCustomer = await dbManager.queryOne<any>(
+      const newCustomer = await dbManager.queryOne<CustomerRow>(
         'SELECT * FROM qft_ai_customers WHERE id = ?',
         [result.lastInsertRowid]
       );
@@ -430,7 +431,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
         ...newCustomer,
         business_type: parseBusinessTypes(newCustomer.business_type),
         room_type: parseRoomTypes(newCustomer.room_type),
-        room_tags: parseRoomTags(newCustomer.room_tags),
+        room_tags: parseRoomTags(newCustomer.room_tags || null),
         is_agent: Boolean(newCustomer.is_agent),
       };
 
@@ -594,7 +595,7 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
 
     if (result.changes > 0) {
       // 获取更新后的客户信息
-      const updatedCustomer = await dbManager.queryOne<any>(
+      const updatedCustomer = await dbManager.queryOne<CustomerRow>(
         'SELECT * FROM qft_ai_customers WHERE id = ?',
         [body.id]
       );
@@ -607,7 +608,7 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
         ...updatedCustomer,
         business_type: parseBusinessTypes(updatedCustomer.business_type),
         room_type: parseRoomTypes(updatedCustomer.room_type),
-        room_tags: parseRoomTags(updatedCustomer.room_tags),
+        room_tags: parseRoomTags(updatedCustomer.room_tags || null),
         is_agent: Boolean(updatedCustomer.is_agent),
       };
 

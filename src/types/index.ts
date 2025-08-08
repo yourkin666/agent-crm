@@ -111,6 +111,36 @@ export interface Customer {
   updated_at: string;
 }
 
+// 数据库返回的客户原始数据接口（转换前）
+export interface CustomerRow {
+  id: number;
+  name: string;
+  nickname?: string;
+  phone: string;
+  backup_phone?: string;
+  wechat?: string;
+  status: CustomerStatus;
+  community: string;
+  business_type: string;           // 数据库中为字符串，需转换为 BusinessType[]
+  room_type: string;               // 数据库中为字符串，需转换为 RoomType[]
+  room_tags?: string;              // 数据库中为字符串，需转换为 RoomTag[]
+  move_in_date?: string;
+  lease_period?: LeasePeriod;
+  price_range?: string;
+  price_min?: number;
+  price_max?: number;
+  source_channel: SourceChannel;
+  userId?: string;
+  botId?: string;
+  creator: string;
+  is_agent: number;                // 数据库中为数字，需转换为 boolean
+  internal_notes?: string;
+  total_commission: number;
+  viewing_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
 // 带看记录接口
 export interface ViewingRecord {
   id: number;
@@ -162,13 +192,18 @@ export interface ViewingRecordStats {
 }
 
 // API 响应接口
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   message?: string;
   error?: string;
   errorType?: string;
-  details?: any;
+  details?: Record<string, unknown>;
+}
+
+// 带状态码的错误接口
+export interface ErrorWithStatusCode extends Error {
+  statusCode?: number;
 }
 
 // 分页接口

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dbManager } from '../../../../../lib/database';
 import { createDatabaseError, createValidationError, createNotFoundError, withErrorHandler } from '../../../../../lib/api-error-handler';
+import { ErrorWithStatusCode } from '../../../../../types';
 import { createRequestLogger } from '../../../../../lib/logger';
 
 export const GET = withErrorHandler(async (
@@ -75,7 +76,7 @@ export const GET = withErrorHandler(async (
     });
 
   } catch (error) {
-    if (error instanceof Error && (error as any).statusCode) {
+    if (error instanceof Error && (error as ErrorWithStatusCode).statusCode) {
       throw error;
     }
     throw createDatabaseError('获取客户带看记录失败', error as Error);

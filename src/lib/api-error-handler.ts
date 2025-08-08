@@ -21,13 +21,13 @@ export enum ApiErrorType {
 export class ApiError extends Error {
   public readonly type: ApiErrorType;
   public readonly statusCode: number;
-  public readonly details?: any;
+  public readonly details?: Record<string, unknown>;
 
   constructor(
     type: ApiErrorType,
     message: string,
     statusCode: number = 500,
-    details?: any
+    details?: Record<string, unknown>
   ) {
     super(message);
     this.name = 'ApiError';
@@ -43,7 +43,7 @@ export class ApiError extends Error {
 export function createErrorResponse(
   error: string | Error | ApiError,
   statusCode: number = 500,
-  details?: any
+  details?: Record<string, unknown>
 ): NextResponse {
   let response: ApiResponse;
 
@@ -86,7 +86,7 @@ export function createErrorResponse(
 /**
  * 创建成功响应
  */
-export function createSuccessResponse<T = any>(
+export function createSuccessResponse<T = unknown>(
   data?: T,
   message?: string,
   statusCode: number = 200
@@ -103,7 +103,7 @@ export function createSuccessResponse<T = any>(
 /**
  * 验证错误便捷方法
  */
-export function createValidationError(message: string, details?: any): ApiError {
+export function createValidationError(message: string, details?: Record<string, unknown>): ApiError {
   return new ApiError(ApiErrorType.VALIDATION_ERROR, message, 400, details);
 }
 
@@ -129,14 +129,14 @@ export function createDatabaseError(operation: string, originalError?: Error): A
     ApiErrorType.DATABASE_ERROR,
     `${operation}失败`,
     500,
-    originalError?.message
+    originalError?.message ? { message: originalError.message } : undefined
   );
 }
 
 /**
  * API路由错误处理装饰器
  */
-export function withErrorHandler<T extends any[], R>(
+export function withErrorHandler<T extends unknown[], R>(
   handler: (...args: T) => Promise<R>
 ) {
   return async (...args: T): Promise<NextResponse | R> => {
@@ -172,7 +172,7 @@ export function withErrorHandler<T extends any[], R>(
       return createErrorResponse(
         new ApiError(ApiErrorType.INTERNAL_ERROR, '服务器内部错误', 500),
         500,
-        error instanceof Error ? error.message : error
+        error instanceof Error ? { message: error.message } : { error: String(error) }
       );
     }
   };
@@ -181,17 +181,17 @@ export function withErrorHandler<T extends any[], R>(
 /**
  * 输入验证装饰器
  */
-export function validateInput(validator: (input: any) => void) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+export function validateInput(validator: (input: Record<string, unknown>) => void) {
+  return function (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value;
     
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       try {
         // 假设第一个参数是 request
-        const request = args[0];
+        const request = args[0] as { json?: () => Promise<unknown> };
         if (request && typeof request.json === 'function') {
           const body = await request.json();
-          validator(body);
+          validator(body as Record<string, unknown>);
         }
         return await originalMethod.apply(this, args);
       } catch (error) {

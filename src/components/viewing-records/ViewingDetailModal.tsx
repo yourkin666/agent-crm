@@ -5,7 +5,7 @@ import { Modal, Descriptions, Tag, Space } from 'antd';
 import { ViewingRecord } from '@/types';
 import {
     VIEWING_STATUS_TEXT, VIEWING_STATUS_COLOR, BUSINESS_TYPE_TEXT,
-    VIEWER_TYPE_TEXT_BY_STRING, VIEWING_FEEDBACK_TEXT, ROOM_TYPE_TEXT
+    VIEWER_TYPE_TEXT_BY_STRING, ROOM_TYPE_TEXT
 } from '@/utils/constants';
 import { formatDate, formatMoney } from '@/utils/helpers';
 
@@ -161,7 +161,7 @@ export default function ViewingDetailModal({ visible, record, onCancel }: Viewin
             onCancel={onCancel}
             footer={null}
             width={800}
-            destroyOnHidden
+            destroyOnClose
         >
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
                 {items.map((item) => (

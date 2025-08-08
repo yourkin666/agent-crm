@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    Modal, Form, Input, Select, DatePicker, InputNumber, Button, message, Row, Col
+    Modal, Form, Input, Select, DatePicker, InputNumber, Button, Row, Col, App
 } from 'antd';
 import { ViewingRecord } from '@/types';
 import {
     BUSINESS_TYPE_TEXT, ROOM_TYPE_TEXT
 } from '@/utils/constants';
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -23,6 +23,7 @@ interface EditViewingModalProps {
 export default function EditViewingModal({ visible, record, onCancel, onSuccess }: EditViewingModalProps) {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
+    const { message } = App.useApp();
 
     // 当记录变化时，更新表单数据
     useEffect(() => {
@@ -43,9 +44,14 @@ export default function EditViewingModal({ visible, record, onCancel, onSuccess 
         }
     }, [record, visible, form]);
 
-    const handleSubmit = async (values: any) => {
+    const toISOString = (value?: Dayjs | null): string | null => {
+        if (!value) return null;
+        const d = value.toDate();
+        return isNaN(d.getTime()) ? null : d.toISOString();
+    };
+
+    const handleSubmit = async (values: Record<string, unknown>) => {
         if (!record) return;
-        
         setLoading(true);
         try {
             const response = await fetch(`/api/viewing-records/${record.id}`, {
@@ -55,13 +61,13 @@ export default function EditViewingModal({ visible, record, onCancel, onSuccess 
                 },
                 body: JSON.stringify({
                     ...values,
-                    viewing_time: values.viewing_time ? values.viewing_time.toISOString() : record.viewing_time,
+                    viewing_time: toISOString(values.viewing_time as Dayjs | null) || record.viewing_time,
                 }),
             });
 
             const result = await response.json();
 
-            if (result.success) {
+            if (response.ok && result.success) {
                 message.success('带看记录更新成功');
                 form.resetFields();
                 onSuccess();
@@ -89,7 +95,7 @@ export default function EditViewingModal({ visible, record, onCancel, onSuccess 
             onCancel={handleCancel}
             footer={null}
             width={700}
-            destroyOnHidden
+            destroyOnClose
         >
             <Form
                 form={form}

@@ -9,17 +9,7 @@ function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-interface ViewingRecordFilterParams {
-  page?: string;
-  pageSize?: string;
-  customer_name?: string;
-  property_name?: string;
-  viewing_status?: string;
-  business_type?: string;
-  viewer_name?: string;
-  date_from?: string;
-  date_to?: string;
-}
+export const dynamic = 'force-dynamic';
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
   const requestId = generateRequestId();
@@ -33,7 +23,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     requestId
   }, 'API请求开始 - 获取带看记录列表');
 
-  const { searchParams } = new URL(request.url);
+  const { searchParams } = request.nextUrl;
   
   // 解析查询参数
   const page = parseInt(searchParams.get('page') || '1');
@@ -54,7 +44,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   try {
     // 构建WHERE条件
     const whereConditions: string[] = [];
-    const queryParams: any[] = [];
+    const queryParams: (string | number | boolean)[] = [];
 
     if (customer_name) {
       whereConditions.push('customer_name LIKE ?');
@@ -96,7 +86,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     // 查询总数
     const countQuery = `SELECT COUNT(*) as total FROM qft_ai_viewing_records ${whereClause}`;
     const countResult = await dbManager.queryOne(countQuery, queryParams);
-    const total = countResult?.total || 0;
+    const total = Number(countResult?.total || 0);
 
     // 计算分页
     const offset = (page - 1) * pageSize;

@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { dbManager } from '@/lib/database';
-import { withErrorHandler, createDatabaseError, createSuccessResponse, createValidationError } from '@/lib/api-error-handler';
+import { withErrorHandler, createSuccessResponse, createValidationError } from '@/lib/api-error-handler';
 import { createRequestLogger } from '@/lib/logger';
 
 // 生成请求ID的辅助函数
@@ -9,42 +9,44 @@ function generateRequestId(): string {
 }
 
 // 外部房源查询API接口
+interface PropertyInfo {
+  id: number;
+  companyId: number;
+  businessType: number;
+  housingId: number;
+  houseAreaId: number;
+  houseAreaName: string;
+  cityId: number;
+  cityName: string;
+  propertyAddrId: number;
+  propertyAddr: string;
+  detailAddr: string;
+  peripheryKeyword?: string;
+  longitude: string;
+  latitude: string;
+  roomId: number;
+  insideSpace?: number;
+  orientation?: string;
+  unitType: string;
+  floor?: string;
+  totalFloor?: string;
+  advisorId: number;
+  advisorName: string;
+  companyName: string;
+  companyAbbreviation: string;
+  searchBusinessType: number;
+  houseTypeId: number;
+}
+
 interface ExternalPropertyResponse {
   code: number;
   message: string;
-  data: Array<{
-    id: number;
-    companyId: number;
-    businessType: number;
-    housingId: number;
-    houseAreaId: number;
-    houseAreaName: string;
-    cityId: number;
-    cityName: string;
-    propertyAddrId: number;
-    propertyAddr: string;
-    detailAddr: string;
-    peripheryKeyword?: string;
-    longitude: string;
-    latitude: string;
-    roomId: number;
-    insideSpace?: number;
-    orientation?: string;
-    unitType: string;
-    floor?: string;
-    totalFloor?: string;
-    advisorId: number;
-    advisorName: string;
-    companyName: string;
-    companyAbbreviation: string;
-    searchBusinessType: number;
-    houseTypeId: number;
-  }>;
+  data: PropertyInfo[];
   timestamp: number;
 }
 
 // 调用外部房源查询API
-async function queryExternalPropertyInfo(propertyAddr: string, detailAddr?: string, requestLogger?: any): Promise<any> {
+async function queryExternalPropertyInfo(propertyAddr: string, detailAddr?: string, requestLogger?: { info: (data: Record<string, unknown>, message: string) => void; error: (data: Record<string, unknown>, message: string) => void }): Promise<PropertyInfo | null> {
   const requestId = generateRequestId();
   
   try {
@@ -61,7 +63,7 @@ async function queryExternalPropertyInfo(propertyAddr: string, detailAddr?: stri
     // 正确的API路径已确认：/api/housing/search-properties
     const apiUrl = `${baseUrl}/api/housing/search-properties?${searchParams.toString()}`;
     
-    requestLogger?.debug({
+    requestLogger?.info({
       apiUrl,
       propertyAddr,
       detailAddr,
@@ -79,7 +81,7 @@ async function queryExternalPropertyInfo(propertyAddr: string, detailAddr?: stri
     });
     
     if (!response.ok) {
-      requestLogger?.warn({
+      requestLogger?.error({
         status: response.status,
         statusText: response.statusText,
         propertyAddr,
@@ -91,7 +93,7 @@ async function queryExternalPropertyInfo(propertyAddr: string, detailAddr?: stri
     
     const data: ExternalPropertyResponse = await response.json();
     
-    requestLogger?.debug({
+    requestLogger?.info({
       responseCode: data.code,
       dataLength: data.data?.length,
       propertyAddr,
@@ -115,7 +117,7 @@ async function queryExternalPropertyInfo(propertyAddr: string, detailAddr?: stri
       
       return propertyInfo;
     } else {
-      requestLogger?.warn({
+      requestLogger?.error({
         responseCode: data.code,
         message: data.message,
         propertyAddr,
@@ -138,7 +140,7 @@ async function queryExternalPropertyInfo(propertyAddr: string, detailAddr?: stri
 }
 
 // 外部带看记录数据验证
-function validateExternalViewingData(data: any): void {
+function validateExternalViewingData(data: Record<string, unknown>): void {
   // 必填字段验证
   if (!data.userId) {
     throw createValidationError('userId为必填字段');
@@ -152,7 +154,7 @@ function validateExternalViewingData(data: any): void {
 }
 
 // 从带看记录数据中提取客户信息
-function extractCustomerDataFromViewing(viewingData: any) {
+function extractCustomerDataFromViewing(viewingData: Record<string, unknown>) {
   // 确保客户姓名不为空，使用fallback值
   const customerName = viewingData.customer_name || `用户${viewingData.userId}`;
   
@@ -270,60 +272,60 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       const customerUpdateData = extractCustomerDataFromViewing(body);
 
       // 构建更新SQL，避免手机号冲突
-      const updateFields = [];
-      const updateValues = [];
+      const updateFields: string[] = [];
+      const updateValues: (string | number | boolean)[] = [];
       
       // 非唯一性字段，安全更新
       if (customerUpdateData.botId !== null) {
         updateFields.push('botId = COALESCE(?, botId)');
-        updateValues.push(customerUpdateData.botId);
+        updateValues.push(customerUpdateData.botId as string);
       }
       if (customerUpdateData.nickname !== null) {
         updateFields.push('nickname = COALESCE(?, nickname)');
-        updateValues.push(customerUpdateData.nickname);
+        updateValues.push(customerUpdateData.nickname as string);
       }
       if (customerUpdateData.name !== null) {
         updateFields.push('name = COALESCE(?, name)');
-        updateValues.push(customerUpdateData.name);
+        updateValues.push(customerUpdateData.name as string);
       }
       if (customerUpdateData.community !== null) {
         updateFields.push('community = COALESCE(?, community)');
-        updateValues.push(customerUpdateData.community);
+        updateValues.push(customerUpdateData.community as string);
       }
       if (customerUpdateData.business_type !== null) {
         updateFields.push('business_type = COALESCE(?, business_type)');
-        updateValues.push(customerUpdateData.business_type);
+        updateValues.push(customerUpdateData.business_type as string);
       }
       if (customerUpdateData.room_type !== null) {
         updateFields.push('room_type = COALESCE(?, room_type)');
-        updateValues.push(customerUpdateData.room_type);
+        updateValues.push(customerUpdateData.room_type as string);
       }
       if (customerUpdateData.room_tags !== null) {
         updateFields.push('room_tags = COALESCE(?, room_tags)');
-        updateValues.push(customerUpdateData.room_tags);
+        updateValues.push(customerUpdateData.room_tags as string);
       }
       if (customerUpdateData.source_channel !== null) {
         updateFields.push('source_channel = COALESCE(?, source_channel)');
-        updateValues.push(customerUpdateData.source_channel);
+        updateValues.push(customerUpdateData.source_channel as string);
       }
       if (customerUpdateData.creator !== null) {
         updateFields.push('creator = COALESCE(?, creator)');
-        updateValues.push(customerUpdateData.creator);
+        updateValues.push(customerUpdateData.creator as string);
       }
       if (customerUpdateData.internal_notes !== null) {
         updateFields.push('internal_notes = COALESCE(?, internal_notes)');
-        updateValues.push(customerUpdateData.internal_notes);
+        updateValues.push(customerUpdateData.internal_notes as string);
       }
       
       // 手机号只在现有客户没有手机号的情况下才更新
       if (customerUpdateData.phone !== null && !existingCustomer.phone) {
         updateFields.push('phone = ?');
-        updateValues.push(customerUpdateData.phone);
+        updateValues.push(customerUpdateData.phone as string);
       }
       
       // 总是更新更新时间
       updateFields.push('updated_at = CURRENT_TIMESTAMP');
-      updateValues.push(customerId); // WHERE条件的参数
+      updateValues.push(customerId as number); // WHERE条件的参数
       
       if (updateFields.length > 1) { // 大于1是因为包含了updated_at
         await dbManager.execute(`
@@ -358,18 +360,18 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           source_channel, creator, is_agent, internal_notes
         ) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, 0, ?)
       `, [
-        customerCreateData.userId,
-        customerCreateData.botId,
-        customerCreateData.nickname,
-        customerCreateData.name,
-        customerCreateData.phone,
-        customerCreateData.community,
-        customerCreateData.business_type,
-        customerCreateData.room_type,
-        customerCreateData.room_tags,
-        customerCreateData.source_channel,
-        customerCreateData.creator,
-        customerCreateData.internal_notes
+        customerCreateData.userId as string,
+        customerCreateData.botId as string,
+        customerCreateData.nickname as string,
+        customerCreateData.name as string,
+        customerCreateData.phone as string,
+        customerCreateData.community as string,
+        customerCreateData.business_type as string,
+        customerCreateData.room_type as string,
+        customerCreateData.room_tags as string,
+        customerCreateData.source_channel as string,
+        customerCreateData.creator as string,
+        customerCreateData.internal_notes as string
       ]);
 
       if (customerResult.lastInsertRowid) {
@@ -632,7 +634,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           total_commission = (SELECT COALESCE(SUM(commission), 0) FROM qft_ai_viewing_records WHERE customer_id = ?),
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `, [customerId, customerId, customerId]);
+      `, [customerId as number, customerId as number, customerId as number]);
 
       requestLogger.info({
         statusCode: 201,

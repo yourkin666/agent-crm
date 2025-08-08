@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { RoomTag, BusinessType, RoomType } from '@/types';
 import {
-  CUSTOMER_STATUS_TEXT, SOURCE_CHANNEL_TEXT, BUSINESS_TYPE_TEXT,
+  BUSINESS_TYPE_TEXT,
   ROOM_TYPE_TEXT, ROOM_TAG_TEXT,
   ROOM_TYPE_TEXT_BY_STRING,
   BUSINESS_TYPE_TEXT_BY_STRING, ROOM_TAG_TEXT_BY_STRING,
@@ -228,7 +228,7 @@ export function generateId(): string {
  * @param wait 延迟时间（毫秒）
  * @returns 防抖后的函数
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -263,7 +263,7 @@ export function deepClone<T>(obj: T): T {
  * @param value 值
  * @returns 是否为空
  */
-export function isEmpty(value: any): boolean {
+export function isEmpty(value: unknown): boolean {
   if (value === null || value === undefined) return true;
   if (typeof value === 'string') return value.trim() === '';
   if (Array.isArray(value)) return value.length === 0;

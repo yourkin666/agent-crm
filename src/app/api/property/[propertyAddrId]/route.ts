@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
@@ -6,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { propertyAddrId } = params;
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
 
     console.log('调用物业详细地址查询API，propertyAddrId:', propertyAddrId);
 

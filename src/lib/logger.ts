@@ -2,6 +2,7 @@ import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
 import { NextRequest } from 'next/server';
+import { ErrorWithStatusCode } from '../types';
 
 /**
  * 日志级别配置
@@ -52,41 +53,6 @@ function getLogLevel(): keyof typeof LOG_LEVELS {
 }
 
 /**
- * 确保日志目录存在
- */
-function ensureLogDirectory() {
-  const logDir = path.join(process.cwd(), 'logs');
-  if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir, { recursive: true });
-  }
-  return logDir;
-}
-
-/**
- * 获取当前日期的日志文件名
- */
-function getLogFileName(type: 'app' | 'error' = 'app'): string {
-  const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  return `${type}-${date}.log`;
-}
-
-/**
- * 自定义时间格式化函数 - 中文易读格式
- */
-function customTimeFormat() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  const milliseconds = String(now.getMilliseconds()).padStart(3, '0');
-  
-  return `,"time":"${year}年${month}月${day}日 ${hours}:${minutes}:${seconds}.${milliseconds}"`;
-}
-
-/**
  * 获取中文格式的时间戳字符串
  */
 export function getChineseTimestamp(date?: Date): string {
@@ -107,19 +73,10 @@ export function getChineseTimestamp(date?: Date): string {
  */
 function createLogger() {
   const level = getLogLevel();
-  const isDevelopment = process.env.NODE_ENV === 'development';
 
-  // 简化配置，只输出到控制台，避免线程流问题
+  // 使用最基础的 stdout 输出，避免在 Next.js App Router 的 Route Handlers 中使用任何基于 worker 的 transport
   const baseConfig = {
     level,
-    transport: isDevelopment ? {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'yyyy-mm-dd HH:MM:ss',
-        ignore: 'pid,hostname',
-      },
-    } : undefined,
     formatters: {
       level: (label: string, number: number) => {
         return { 
@@ -130,7 +87,7 @@ function createLogger() {
       // 移除 pid 和 hostname
       bindings: () => ({}),
     },
-  };
+  } as const;
 
   return pino(baseConfig);
 }
@@ -222,7 +179,7 @@ export const businessLogger = {
   /**
    * 记录客户相关操作
    */
-  customer: (action: string, customerId?: string, data?: any) => {
+  customer: (action: string, customerId?: string, data?: Record<string, unknown>) => {
     logger.info(
       {
         business: 'customer',
@@ -234,12 +191,10 @@ export const businessLogger = {
     );
   },
 
-
-
   /**
    * 记录带看相关操作
    */
-  viewing: (action: string, viewingId?: string, data?: any) => {
+  viewing: (action: string, viewingId?: string, data?: Record<string, unknown>) => {
     logger.info(
       {
         business: 'viewing',
@@ -254,13 +209,13 @@ export const businessLogger = {
   /**
    * 记录数据同步操作
    */
-  sync: (action: string, data?: any) => {
+  sync: (action: string, data?: Record<string, unknown>) => {
     // 如果data中包含timestamp，转换为中文格式
     let processedData = data;
     if (data && data.timestamp) {
       processedData = {
         ...data,
-        timestamp: getChineseTimestamp(new Date(data.timestamp))
+        timestamp: getChineseTimestamp(new Date(data.timestamp as string | number))
       };
     } else if (action === 'started') {
       // 为started操作自动添加中文时间戳
@@ -392,15 +347,15 @@ export const logUtils = {
  * 统一的API日志中间件
  * 用于简化各个接口的日志记录，提供一致的日志格式和流程
  */
-export function withApiLogging<T extends any[], R>(
+export function withApiLogging<T extends unknown[], R>(
   apiName: string,
-  handler: (request: NextRequest, requestId: string, requestLogger: any, ...args: T) => Promise<R>
+  handler: (request: NextRequest, requestId: string, requestLogger: ReturnType<typeof createRequestLogger>, ...args: T) => Promise<R>
 ) {
   return async (request: NextRequest, ...args: T): Promise<R> => {
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const startTime = Date.now();
     const requestLogger = createRequestLogger(requestId);
-    const url = new URL(request.url);
+    const url = request.nextUrl;
 
     // 记录请求开始
     requestLogger.info({
@@ -430,7 +385,7 @@ export function withApiLogging<T extends any[], R>(
       const duration = Date.now() - startTime;
       
       // 记录API请求失败
-      const statusCode = error instanceof Error && 'statusCode' in error ? (error as any).statusCode : 500;
+      const statusCode = error instanceof Error && 'statusCode' in error ? (error as ErrorWithStatusCode).statusCode : 500;
       logApiRequest(request.method, url.pathname, statusCode, duration, error as Error);
       
       requestLogger.error({
@@ -451,7 +406,7 @@ export const simpleBusinessLogger = {
   /**
    * 记录客户相关操作
    */
-  customer: (action: string, requestId: string, data: any) => {
+  customer: (action: string, requestId: string, data: Record<string, unknown>) => {
     businessLogger.customer(action, data.customerId?.toString(), {
       requestId,
       ...data
@@ -459,14 +414,9 @@ export const simpleBusinessLogger = {
   },
 
   /**
-   * 记录预约相关操作
-   */
-
-
-  /**
    * 记录带看相关操作
    */
-  viewing: (action: string, requestId: string, data: any) => {
+  viewing: (action: string, requestId: string, data: Record<string, unknown>) => {
     businessLogger.viewing(action, data.viewingRecordId?.toString(), {
       requestId,
       ...data
