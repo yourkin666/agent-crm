@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Table, Button, Space, Tag, Input, Select, Form, Row, Col,
-    Card, Statistic, message, Pagination
+    Card, Statistic, Pagination, App
 } from 'antd';
 import {
     SearchOutlined, EyeOutlined,
@@ -61,6 +61,8 @@ export default function ViewingRecordsPage() {
         pageSize: DEFAULT_PAGE_SIZE,
     });
 
+    const { message } = App.useApp();
+
     // 模态框状态
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [editModalVisible, setEditModalVisible] = useState(false);
@@ -91,7 +93,7 @@ export default function ViewingRecordsPage() {
         } finally {
             setStatsLoading(false);
         }
-    }, [filters]);
+    }, [filters, message]);
 
     // 获取带看记录数据
     const fetchViewingRecords = useCallback(async (params: ViewingRecordFilterParams = {}) => {
@@ -125,7 +127,7 @@ export default function ViewingRecordsPage() {
         } finally {
             setLoading(false);
         }
-    }, [filters]);
+    }, [filters, message]);
 
     // 获取单个带看记录详情
     const fetchViewingRecordDetail = async (id: number) => {

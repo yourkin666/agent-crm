@@ -179,7 +179,7 @@ function AddViewingModalInner({ visible, customer, onCancel, onSuccess }: AddVie
       onOk={() => form.submit()}
       confirmLoading={loading}
       width={600}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}

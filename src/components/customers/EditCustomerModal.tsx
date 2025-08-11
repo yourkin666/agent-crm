@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import {
-  Modal, Form, Input, Select, DatePicker, Row, Col, message
+  Modal, Form, Input, Select, DatePicker, Row, Col, App
 } from 'antd';
 import {
   Customer
@@ -26,6 +26,7 @@ interface EditCustomerModalProps {
 export default function EditCustomerModal({ visible, customer, onCancel, onSuccess }: EditCustomerModalProps) {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
+  const { message } = App.useApp();
 
   // 当模态框打开且有客户数据时，设置表单初始值
   useEffect(() => {
@@ -103,7 +104,7 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
         onOk={() => form.submit()}
         confirmLoading={loading}
         width={800}
-        destroyOnClose
+        destroyOnHidden
         styles={{
           body: { padding: '16px' },
           header: { paddingBottom: '12px' }

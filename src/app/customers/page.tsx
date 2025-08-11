@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Table, Button, Space, Tag, Input, Form, Row, Col,
-    Card, Statistic, message, Pagination
+    Card, Statistic, Pagination, App
 } from 'antd';
 import {
     PlusOutlined, SearchOutlined, EyeOutlined,
@@ -43,6 +43,8 @@ export default function CustomersPage() {
         page: 1,
         pageSize: DEFAULT_PAGE_SIZE,
     });
+
+    const { message } = App.useApp();
 
     // 模态框状态
     const [addModalVisible, setAddModalVisible] = useState(false);
@@ -91,7 +93,7 @@ export default function CustomersPage() {
         } finally {
             setLoading(false);
         }
-    }, [filters]);
+    }, [filters, message]);
 
     // 处理高级筛选
     const handleAdvancedFilter = (advancedFilters: Partial<CustomerFilterParams>) => {

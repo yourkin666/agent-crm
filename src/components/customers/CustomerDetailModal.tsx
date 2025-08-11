@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Modal, Tabs, Row, Col, Tag, Table, Empty, Spin, message, Button
+  Modal, Tabs, Row, Col, Tag, Table, Empty, Spin, Button, App
 } from 'antd';
 import { EditOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -36,6 +36,7 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
   const [editViewingVisible, setEditViewingVisible] = useState(false);
   const [selectedViewingRecord, setSelectedViewingRecord] = useState<ViewingRecord | null>(null);
   const [currentTab, setCurrentTab] = useState('info');
+  const { message } = App.useApp();
 
   // 加载客户的带看记录
   const loadViewingRecords = async (customerId: number) => {
@@ -368,7 +369,7 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
         onCancel={onCancel}
         footer={null}
         width={1000}
-        destroyOnClose
+        destroyOnHidden
       >
         <Tabs
           activeKey={currentTab}

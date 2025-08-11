@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Input } from 'antd';
+import { Input, Space } from 'antd';
 import { InputRef } from 'antd/lib/input';
 
 interface PriceRangeInputProps {
@@ -12,7 +12,8 @@ interface PriceRangeInputProps {
 }
 
 const PriceRangeInput: React.ForwardRefRenderFunction<InputRef, PriceRangeInputProps> = (
-  { value, onChange, disabled = false }
+  { value, onChange, disabled = false },
+  ref
 ) => {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
@@ -52,8 +53,9 @@ const PriceRangeInput: React.ForwardRefRenderFunction<InputRef, PriceRangeInputP
   };
 
   return (
-    <Input.Group compact>
+    <Space.Compact>
       <Input
+        ref={ref}
         style={{ width: 'calc(50% - 16px)', textAlign: 'right' }}
         placeholder="最低价格"
         value={minPrice}
@@ -80,7 +82,7 @@ const PriceRangeInput: React.ForwardRefRenderFunction<InputRef, PriceRangeInputP
         onChange={handleMaxPriceChange}
         disabled={disabled}
       />
-    </Input.Group>
+    </Space.Compact>
   );
 };
 

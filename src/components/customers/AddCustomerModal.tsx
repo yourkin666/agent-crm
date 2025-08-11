@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  Modal, Form, Input, Select, DatePicker, Row, Col, message
+  Modal, Form, Input, Select, DatePicker, Row, Col, App
 } from 'antd';
 import {
   CustomerStatus
@@ -25,6 +25,7 @@ interface AddCustomerModalProps {
 export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCustomerModalProps) {
   const [form] = Form.useForm();
   const [loading, setLoading] = React.useState(false);
+  const { message } = App.useApp();
 
   const handleSubmit = async (values: Record<string, unknown>) => {
     setLoading(true);
@@ -32,8 +33,11 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
       // 处理数据格式
       const submitData = {
         ...values,
-        creator: '管理员', // 这里可以改为从用户上下文获取
+        creator: (values.creator as string) || '管理员',
         is_agent: true,
+        move_in_date: values.move_in_date
+          ? (values.move_in_date as { format: (pattern: string) => string }).format('YYYY-MM-DD')
+          : null,
         // 确保数组字段是正确的格式
         business_type: values.business_type || [],
         room_type: values.room_type || [],
@@ -79,7 +83,7 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
       onOk={() => form.submit()}
       confirmLoading={loading}
       width={800}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}

@@ -161,7 +161,7 @@ export default function ViewingDetailModal({ visible, record, onCancel }: Viewin
             onCancel={onCancel}
             footer={null}
             width={800}
-            destroyOnClose
+            destroyOnHidden
         >
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
                 {items.map((item) => (
