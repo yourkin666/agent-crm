@@ -3,29 +3,8 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['antd', '@ant-design/icons'],
   },
-  webpack: (config, { dev, isServer }) => {
-    // 优化开发模式下的编译速度
-    if (dev && !isServer) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          cacheGroups: {
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              chunks: 'all',
-            },
-            antd: {
-              test: /[\\/]node_modules[\\/]antd[\\/]/,
-              name: 'antd',
-              chunks: 'all',
-            },
-          },
-        },
-      };
-    }
-    
+  webpack: (config) => {
+    // 保持 Next.js 默认的代码分割配置，避免开发环境资源 404
     return config;
   },
   // 启用SWC进行更快的编译

@@ -7,7 +7,7 @@ import {
 } from 'antd';
 import {
     SearchOutlined, EyeOutlined,
-    EditOutlined
+    EditOutlined, ReloadOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import MainLayout from '@/components/layout/MainLayout';
@@ -170,6 +170,12 @@ export default function ViewingRecordsPage() {
         setFilters(resetFilters);
         fetchViewingRecords(resetFilters);
         fetchViewingStats(resetFilters);
+    };
+
+    // 刷新数据
+    const handleRefresh = () => {
+        fetchViewingRecords(filters);
+        fetchViewingStats(filters);
     };
 
     // 分页处理
@@ -474,6 +480,9 @@ export default function ViewingRecordsPage() {
                                 </Button>
                                 <Button onClick={handleReset}>
                                     重置
+                                </Button>
+                                <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                                    刷新
                                 </Button>
                             </Space>
                         </Form.Item>

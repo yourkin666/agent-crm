@@ -7,7 +7,7 @@ import {
 } from 'antd';
 import {
     PlusOutlined, SearchOutlined, EyeOutlined,
-    EditOutlined, CalendarOutlined
+    EditOutlined, CalendarOutlined, ReloadOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import MainLayout from '@/components/layout/MainLayout';
@@ -178,6 +178,11 @@ export default function CustomersPage() {
         };
         setFilters(newFilters as unknown as CustomerFilterParams);
         loadCustomers(newFilters);
+    };
+
+    // 刷新数据
+    const handleRefresh = () => {
+        loadCustomers(filters);
     };
 
     // 分页处理
@@ -460,6 +465,9 @@ export default function CustomersPage() {
                                     </Button>
                                     <Button onClick={handleReset}>
                                         清空
+                                    </Button>
+                                    <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
+                                        刷新
                                     </Button>
                                     
                                     {/* 筛选条件标签 */}
