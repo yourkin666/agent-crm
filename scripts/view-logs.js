@@ -18,7 +18,8 @@ function getLogFiles() {
 function formatJsonLog(line) {
   try {
     const log = JSON.parse(line);
-    const time = new Date(log.time).toLocaleString('zh-CN');
+    const timeStr = log.timeLocal || log.time || new Date().toISOString();
+    const time = log.timeLocal ? log.timeLocal : new Date(timeStr).toLocaleString('zh-CN');
     const level = log.level === 30 ? 'INFO' : 
                   log.level === 40 ? 'WARN' : 
                   log.level === 50 ? 'ERROR' : 

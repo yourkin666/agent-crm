@@ -1,6 +1,7 @@
 import pino from 'pino';
 import fs from 'fs';
 import path from 'path';
+import { Writable } from 'stream';
 import { NextRequest } from 'next/server';
 import { ErrorWithStatusCode } from '../types';
 
@@ -69,16 +70,126 @@ export function getChineseTimestamp(date?: Date): string {
 }
 
 /**
+ * 简单日志文件写入与按天滚动
+ */
+const LOGS_DIR = path.join(process.cwd(), 'logs');
+
+function ensureLogsDirExists(): void {
+  try {
+    if (!fs.existsSync(LOGS_DIR)) {
+      fs.mkdirSync(LOGS_DIR, { recursive: true });
+    }
+  } catch {
+    // 忽略目录创建错误，避免影响请求
+  }
+}
+
+function getDateString(d: Date = new Date()): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getAppLogPath(dateStr: string): string {
+  return path.join(LOGS_DIR, `app-${dateStr}.log`);
+}
+
+function getErrorLogPath(dateStr: string): string {
+  return path.join(LOGS_DIR, `error-${dateStr}.log`);
+}
+
+let fileLogState: {
+  date: string;
+  appStream: fs.WriteStream;
+  errorStream: fs.WriteStream;
+} | null = null;
+
+function openFileStreamsFor(dateStr: string) {
+  ensureLogsDirExists();
+  const appPath = getAppLogPath(dateStr);
+  const errorPath = getErrorLogPath(dateStr);
+
+  const appStream = fs.createWriteStream(appPath, { flags: 'a' });
+  const errorStream = fs.createWriteStream(errorPath, { flags: 'a' });
+
+  fileLogState = { date: dateStr, appStream, errorStream };
+}
+
+function closeFileStreams() {
+  if (!fileLogState) return;
+  try { fileLogState.appStream.end(); } catch {}
+  try { fileLogState.errorStream.end(); } catch {}
+  fileLogState = null;
+}
+
+function getActiveStreams() {
+  const today = getDateString();
+  if (!fileLogState || fileLogState.date !== today) {
+    closeFileStreams();
+    openFileStreamsFor(today);
+  }
+  return fileLogState!;
+}
+
+const multiDestination = new Writable({
+  write(chunk, _encoding, callback) {
+    try {
+      const line = Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk);
+
+      // 始终输出到控制台（stdout）
+      try {
+        // 避免在某些受限环境中抛错
+        process.stdout.write(line);
+      } catch {}
+
+      // 写入日志文件
+      try {
+        const { appStream, errorStream } = getActiveStreams();
+        const normalizedLine = line.endsWith('\n') ? line : `${line}\n`;
+
+        // 所有日志写入 app 日志
+        appStream.write(normalizedLine);
+
+        // 错误及以上写入 error 日志
+        try {
+          const parsed = JSON.parse(line);
+          const levelNum = typeof parsed.level === 'number' ? parsed.level : undefined;
+          if (typeof levelNum === 'number' && levelNum >= LOG_LEVELS.error) {
+            errorStream.write(normalizedLine);
+          }
+        } catch {
+          // 如果无法解析JSON，保守起见不重复写入 error 日志
+        }
+      } catch {
+        // 忽略文件写入错误
+      }
+
+      callback();
+    } catch {
+      // 兜底，防止写入异常阻塞
+      try { callback(); } catch {}
+    }
+  },
+});
+
+/**
  * 创建 logger 实例
  */
 function createLogger() {
   const level = getLogLevel();
 
-  // 使用最基础的 stdout 输出，避免在 Next.js App Router 的 Route Handlers 中使用任何基于 worker 的 transport
+  // 使用基础配置 + 自定义多路输出（stdout + 文件）
   const baseConfig = {
     level,
+    // 让 time 字段为 ISO 字符串，并额外增加本地中文时间，便于直接阅读
+    timestamp: () => {
+      const now = new Date();
+      const local = now.toLocaleString('zh-CN', { hour12: false, timeZone: 'Asia/Shanghai' });
+      return `,"timeLocal":"${local}"`;
+    },
     formatters: {
-      level: (label: string, number: number) => {
+      level: (_label: string, number: number) => {
         return { 
           level: number,
           levelLabel: LOG_LEVEL_LABELS[number] || '未知'
@@ -89,7 +200,7 @@ function createLogger() {
     },
   } as const;
 
-  return pino(baseConfig);
+  return pino(baseConfig, multiDestination as unknown as pino.DestinationStream);
 }
 
 /**

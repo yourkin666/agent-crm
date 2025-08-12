@@ -218,30 +218,6 @@ npm run logs:error
 npm run logs help
 ```
 
-### 3. 使用 API 查看日志
-
-通过 HTTP API 查看日志：
-
-```bash
-# 获取日志文件列表和统计
-curl "http://localhost:3000/api/logs?action=list"
-
-# 读取指定日志文件
-curl "http://localhost:3000/api/logs?action=read&file=app-2025-08-05.log"
-
-# 获取日志文件尾部内容
-curl "http://localhost:3000/api/logs?action=tail&file=app-2025-08-05.log&lines=50"
-```
-
-### 4. 日志文件管理
-
-```bash
-# 清理7天以前的日志文件
-curl -X DELETE "http://localhost:3000/api/logs" \
-  -H "Content-Type: application/json" \
-  -d '{"retainDays": 7}'
-```
-
 ### 5. 直接查看文件
 
 你也可以直接查看日志文件：

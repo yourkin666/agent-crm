@@ -1,15 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withErrorHandler } from '@/lib/api-error-handler';
+import { createRequestLogger } from '@/lib/logger';
 export const dynamic = 'force-dynamic';
 
-export async function GET(
+// 生成请求ID的辅助函数
+function generateRequestId(): string {
+  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+export const GET = withErrorHandler(async (
   request: NextRequest,
   { params }: { params: { propertyAddrId: string } }
-) {
+) => {
+  const requestId = generateRequestId();
+  const requestLogger = createRequestLogger(requestId);
+
   try {
     const { propertyAddrId } = params;
     const { searchParams } = request.nextUrl;
 
-    console.log('调用物业详细地址查询API，propertyAddrId:', propertyAddrId);
+    requestLogger.info({
+      method: 'GET',
+      url: `/api/property/${propertyAddrId}`,
+      propertyAddrId,
+      query: Object.fromEntries(searchParams.entries()),
+      userAgent: request.headers.get('user-agent'),
+      requestId
+    }, '调用物业详细地址查询API');
 
     // 构建查询参数
     const queryParams = new URLSearchParams();
@@ -35,19 +52,20 @@ export async function GET(
     });
 
     if (!response.ok) {
-      console.log('外部接口调用失败，返回模拟数据');
+      requestLogger.warn({ status: response.status, statusText: response.statusText, requestId }, '外部接口调用失败，返回模拟数据');
       throw new Error(`接口调用失败: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log('外部接口调用成功，返回数据量:', data?.data?.length || 0);
+    requestLogger.info({ returnedCount: data?.data?.length || 0, requestId }, '外部接口调用成功');
 
     return NextResponse.json({
       success: true,
-      data: data
+      data
     });
   } catch (error) {
-    console.error('详细地址查询接口调用失败:', error);
+    const propertyAddrId = params.propertyAddrId;
+    requestLogger.error({ error: error instanceof Error ? error.message : error, propertyAddrId, requestId }, '详细地址查询接口调用失败');
 
     // 如果外部接口失败，返回一些模拟数据作为备用
     const detailAddressList = [
@@ -57,25 +75,25 @@ export async function GET(
         businessType: 3,
         housingId: 5678,
         houseAreaId: 456,
-        houseAreaName: "天河区",
+        houseAreaName: '天河区',
         cityId: 123,
-        cityName: "广州市",
+        cityName: '广州市',
         propertyAddrId: parseInt(params.propertyAddrId),
-        propertyAddr: "碧桂园凤凰城",
-        detailAddr: "1栋2单元301室",
-        longitude: "113.123456",
-        latitude: "23.123456",
+        propertyAddr: '碧桂园凤凰城',
+        detailAddr: '1栋2单元301室',
+        longitude: '113.123456',
+        latitude: '23.123456',
         roomId: 1001,
-        roomConfig: "床,衣柜,空调,热水器",
+        roomConfig: '床,衣柜,空调,热水器',
         insideSpace: 85.5,
-        orientation: "南北",
-        unitType: "两室一厅",
-        floor: "3",
-        totalFloor: "18",
-        building: "1栋",
-        unitName: "2单元",
-        doorNumber: "301",
-        roomNumber: "301-A",
+        orientation: '南北',
+        unitType: '两室一厅',
+        floor: '3',
+        totalFloor: '18',
+        building: '1栋',
+        unitName: '2单元',
+        doorNumber: '301',
+        roomNumber: '301-A',
         pricingMoney: 2500,
         depositMoney: 2500,
         lockFlag: 1,
@@ -87,22 +105,22 @@ export async function GET(
         livingRoom: 1,
         bathroom: 1,
         kitchen: 1,
-        depositPayMethod: "押1付1",
-        tags: "精装修,近地铁",
+        depositPayMethod: '押1付1',
+        tags: '精装修,近地铁',
         vacantDays: 5,
-        roomTypeName: "主卧",
-        houseTypeName: "精装房",
+        roomTypeName: '主卧',
+        houseTypeName: '精装房',
         roomCount: 1,
         restRoomCount: 1,
-        housingEndTime: "2025-12-31T23:59:59",
+        housingEndTime: '2025-12-31T23:59:59',
         propertyFee: 150.00,
-        butlerPhone: "13800138000",
+        butlerPhone: '13800138000',
         priorityScore: 85,
         roomImageCount: 8,
         advisorId: 789,
-        advisorName: "张三",
-        companyName: "XX房产公司",
-        companyAbbreviation: "XX房产",
+        advisorName: '张三',
+        companyName: 'XX房产公司',
+        companyAbbreviation: 'XX房产',
         searchBusinessType: 3,
         houseTypeId: 101
       },
@@ -112,25 +130,25 @@ export async function GET(
         businessType: 3,
         housingId: 5679,
         houseAreaId: 456,
-        houseAreaName: "天河区",
+        houseAreaName: '天河区',
         cityId: 123,
-        cityName: "广州市",
+        cityName: '广州市',
         propertyAddrId: parseInt(params.propertyAddrId),
-        propertyAddr: "碧桂园凤凰城",
-        detailAddr: "1栋3单元401室",
-        longitude: "113.123456",
-        latitude: "23.123456",
+        propertyAddr: '碧桂园凤凰城',
+        detailAddr: '1栋3单元401室',
+        longitude: '113.123456',
+        latitude: '23.123456',
         roomId: 1002,
-        roomConfig: "床,衣柜,空调,热水器",
+        roomConfig: '床,衣柜,空调,热水器',
         insideSpace: 75.5,
-        orientation: "南",
-        unitType: "一室一厅",
-        floor: "4",
-        totalFloor: "18",
-        building: "1栋",
-        unitName: "3单元",
-        doorNumber: "401",
-        roomNumber: "401-B",
+        orientation: '南',
+        unitType: '一室一厅',
+        floor: '4',
+        totalFloor: '18',
+        building: '1栋',
+        unitName: '3单元',
+        doorNumber: '401',
+        roomNumber: '401-B',
         pricingMoney: 2200,
         depositMoney: 2200,
         lockFlag: 1,
@@ -142,22 +160,22 @@ export async function GET(
         livingRoom: 1,
         bathroom: 1,
         kitchen: 1,
-        depositPayMethod: "押1付1",
-        tags: "特价房,精装修",
+        depositPayMethod: '押1付1',
+        tags: '特价房,精装修',
         vacantDays: 3,
-        roomTypeName: "次卧",
-        houseTypeName: "精装房",
+        roomTypeName: '次卧',
+        houseTypeName: '精装房',
         roomCount: 1,
         restRoomCount: 1,
-        housingEndTime: "2025-12-31T23:59:59",
+        housingEndTime: '2025-12-31T23:59:59',
         propertyFee: 150.00,
-        butlerPhone: "13800138000",
+        butlerPhone: '13800138000',
         priorityScore: 90,
         roomImageCount: 6,
         advisorId: 789,
-        advisorName: "张三",
-        companyName: "XX房产公司",
-        companyAbbreviation: "XX房产",
+        advisorName: '张三',
+        companyName: 'XX房产公司',
+        companyAbbreviation: 'XX房产',
         searchBusinessType: 3,
         houseTypeId: 101
       },
@@ -167,25 +185,25 @@ export async function GET(
         businessType: 2,
         housingId: 5680,
         houseAreaId: 456,
-        houseAreaName: "天河区",
+        houseAreaName: '天河区',
         cityId: 123,
-        cityName: "广州市",
+        cityName: '广州市',
         propertyAddrId: parseInt(params.propertyAddrId),
-        propertyAddr: "碧桂园凤凰城",
-        detailAddr: "2栋1单元101室",
-        longitude: "113.123456",
-        latitude: "23.123456",
+        propertyAddr: '碧桂园凤凰城',
+        detailAddr: '2栋1单元101室',
+        longitude: '113.123456',
+        latitude: '23.123456',
         roomId: 1003,
-        roomConfig: "床,衣柜,空调,热水器,洗衣机",
+        roomConfig: '床,衣柜,空调,热水器,洗衣机',
         insideSpace: 120.0,
-        orientation: "南北",
-        unitType: "三室两厅",
-        floor: "1",
-        totalFloor: "18",
-        building: "2栋",
-        unitName: "1单元",
-        doorNumber: "101",
-        roomNumber: "整套",
+        orientation: '南北',
+        unitType: '三室两厅',
+        floor: '1',
+        totalFloor: '18',
+        building: '2栋',
+        unitName: '1单元',
+        doorNumber: '101',
+        roomNumber: '整套',
         pricingMoney: 4500,
         depositMoney: 4500,
         lockFlag: 1,
@@ -197,22 +215,22 @@ export async function GET(
         livingRoom: 2,
         bathroom: 2,
         kitchen: 1,
-        depositPayMethod: "押1付3",
-        tags: "整租,精装修,近地铁",
+        depositPayMethod: '押1付3',
+        tags: '整租,精装修,近地铁',
         vacantDays: 10,
-        roomTypeName: "整套",
-        houseTypeName: "精装房",
+        roomTypeName: '整套',
+        houseTypeName: '精装房',
         roomCount: 1,
         restRoomCount: 1,
-        housingEndTime: "2025-12-31T23:59:59",
+        housingEndTime: '2025-12-31T23:59:59',
         propertyFee: 300.00,
-        butlerPhone: "13800138000",
+        butlerPhone: '13800138000',
         priorityScore: 95,
         roomImageCount: 12,
         advisorId: 789,
-        advisorName: "张三",
-        companyName: "XX房产公司",
-        companyAbbreviation: "XX房产",
+        advisorName: '张三',
+        companyName: 'XX房产公司',
+        companyAbbreviation: 'XX房产',
         searchBusinessType: 2,
         houseTypeId: 102
       }
@@ -220,7 +238,7 @@ export async function GET(
 
     const mockData = {
       code: 200,
-      message: "查询成功",
+      message: '查询成功',
       data: {
         pageNo: 1,
         pageSize: 20,
@@ -231,11 +249,11 @@ export async function GET(
       timestamp: Date.now()
     };
 
-    console.log('返回模拟数据，数据量:', mockData.data.list.length);
+    requestLogger.info({ returnedCount: mockData.data.list.length, requestId }, '返回模拟数据');
     return NextResponse.json({
       success: true,
       data: mockData,
       isMockData: true
     });
   }
-} 
+}); 
