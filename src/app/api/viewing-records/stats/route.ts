@@ -32,6 +32,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const viewer_name = searchParams.get('viewer_name') || '';
   const date_from = searchParams.get('date_from') || '';
   const date_to = searchParams.get('date_to') || '';
+  const botId = searchParams.get('botId') || '';
 
   try {
     // 构建WHERE条件（与列表接口保持一致）
@@ -71,6 +72,11 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     if (date_to) {
       whereConditions.push('viewing_time <= ?');
       queryParams.push(date_to + ' 23:59:59');
+    }
+
+    if (botId) {
+      whereConditions.push('botId = ?');
+      queryParams.push(botId);
     }
 
     const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';

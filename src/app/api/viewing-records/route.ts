@@ -35,10 +35,11 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const viewer_name = searchParams.get('viewer_name') || '';
   const date_from = searchParams.get('date_from') || '';
   const date_to = searchParams.get('date_to') || '';
+  const botId = searchParams.get('botId') || '';
 
   requestLogger.debug({
     page, pageSize, customer_name, property_name, viewing_status,
-    business_type, viewer_name, date_from, date_to, requestId
+    business_type, viewer_name, date_from, date_to, botId, requestId
   }, '查询参数解析完成');
 
   try {
@@ -79,6 +80,11 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     if (date_to) {
       whereConditions.push('viewing_time <= ?');
       queryParams.push(date_to + ' 23:59:59');
+    }
+
+    if (botId) {
+      whereConditions.push('botId = ?');
+      queryParams.push(botId);
     }
 
     const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';

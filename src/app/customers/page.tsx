@@ -21,7 +21,7 @@ import {
     CUSTOMER_STATUS_TEXT, CUSTOMER_STATUS_COLOR, SOURCE_CHANNEL_TEXT,
     DEFAULT_PAGE_SIZE
 } from '@/utils/constants';
-import { formatPhone, formatDate, formatMoney, formatBusinessTypes, formatRoomTypesDisplay } from '@/utils/helpers';
+import { formatPhone, formatDate, formatMoney, formatBusinessTypes, formatRoomTypesDisplay, formatDateTime } from '@/utils/helpers';
 
 
 
@@ -322,6 +322,13 @@ export default function CustomersPage() {
             render: (channel: string) => SOURCE_CHANNEL_TEXT[channel as keyof typeof SOURCE_CHANNEL_TEXT],
         },
         {
+            title: '添加时间',
+            dataIndex: 'created_at',
+            key: 'created_at',
+            width: 160,
+            render: (time: string) => formatDateTime(time),
+        },
+        {
             title: '录入',
             key: 'entry_info',
             width: 120,
@@ -494,6 +501,12 @@ export default function CustomersPage() {
                                             <span className="remove-tag" onClick={() => removeFilter('move_in_days')}>×</span>
                                         </span>
                                     )}
+                                    {filters.botId && (
+                                        <span className="filter-tag">
+                                            托管ID: {filters.botId}
+                                           <span className="remove-tag" onClick={() => removeFilter('botId')}>×</span>
+                                       </span>
+                                   )}
                                     {filters.viewing_today && (
                                         <span className="filter-tag">
                                             今日看房 

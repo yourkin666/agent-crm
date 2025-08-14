@@ -86,6 +86,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     move_in_days: searchParams.get('move_in_days') ? parseInt(searchParams.get('move_in_days')!) : undefined,
     viewing_today: searchParams.get('viewing_today') === 'true',
     my_entries: searchParams.get('my_entries') === 'true',
+    botId: searchParams.get('botId') || undefined,
   };
 
   requestLogger.debug({
@@ -188,6 +189,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     params.push(`%${filters.community}%`);
   }
 
+  // 新增：按 botId 精确筛选
+  if (filters.botId) {
+    conditions.push('botId = ?');
+    params.push(filters.botId);
+  }
+
   // 价格范围筛选
   if (filters.price_min !== undefined || filters.price_max !== undefined) {
     if (filters.price_min !== undefined && filters.price_max !== undefined) {
@@ -238,18 +245,61 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-
+ 
   // 构建基础查询和计数查询
   const baseQuery = `
-    SELECT * FROM qft_ai_customers 
-    ${whereClause}
-    ORDER BY created_at DESC
+    SELECT c.* FROM (
+      SELECT * FROM qft_ai_customers 
+      ${whereClause}
+    ) AS c
+    LEFT JOIN (
+      SELECT * FROM qft_ai_customers 
+      ${whereClause}
+    ) AS c2
+      ON c.userId IS NOT NULL
+     AND c.userId = c2.userId
+     AND COALESCE(c.botId, '-1') = COALESCE(c2.botId, '-1')
+     AND (c2.created_at > c.created_at OR (c2.created_at = c.created_at AND c2.id > c.id))
+    WHERE c2.id IS NULL
+    ORDER BY c.created_at DESC
   `;
   
-  const countQuery = `SELECT COUNT(*) as count FROM qft_ai_customers ${whereClause}`;
+  const countQuery = `
+    SELECT COUNT(*) as count FROM (
+      SELECT c.id FROM (
+        SELECT * FROM qft_ai_customers 
+        ${whereClause}
+      ) AS c
+      LEFT JOIN (
+        SELECT * FROM qft_ai_customers 
+        ${whereClause}
+      ) AS c2
+        ON c.userId IS NOT NULL
+       AND c.userId = c2.userId
+       AND COALESCE(c.botId, '-1') = COALESCE(c2.botId, '-1')
+       AND (c2.created_at > c.created_at OR (c2.created_at = c.created_at AND c2.id > c.id))
+      WHERE c2.id IS NULL
+    ) AS deduped
+  `;
 
-  // 计算符合筛选条件的总佣金
-  const totalCommissionQuery = `SELECT COALESCE(SUM(total_commission), 0) as total_commission FROM qft_ai_customers ${whereClause}`;
+  // 计算符合筛选条件并去重后的总佣金
+  const totalCommissionQuery = `
+    SELECT COALESCE(SUM(d.total_commission), 0) as total_commission FROM (
+      SELECT c.* FROM (
+        SELECT * FROM qft_ai_customers 
+        ${whereClause}
+      ) AS c
+      LEFT JOIN (
+        SELECT * FROM qft_ai_customers 
+        ${whereClause}
+      ) AS c2
+        ON c.userId IS NOT NULL
+       AND c.userId = c2.userId
+       AND COALESCE(c.botId, '-1') = COALESCE(c2.botId, '-1')
+       AND (c2.created_at > c.created_at OR (c2.created_at = c.created_at AND c2.id > c.id))
+      WHERE c2.id IS NULL
+    ) AS d
+  `;
 
   try {
     // 记录查询开始
@@ -258,19 +308,20 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       requestId
     }, '开始执行数据库查询');
 
-    // 使用分页查询助手
+    // 使用分页查询助手（参数需要重复两次，因为子查询使用了两次 where 条件）
+    const dedupeParams = [...params, ...params];
     const result = await dbManager.queryWithPagination<CustomerRow>(
       baseQuery,
       countQuery,
-      params,
+      dedupeParams,
       filters.page,
       filters.pageSize
     );
 
-    // 获取总佣金
+    // 获取总佣金（同样需要重复参数）
     const totalCommissionResult = await dbManager.queryOne<{ total_commission: number }>(
       totalCommissionQuery,
-      params
+      dedupeParams
     );
 
     // 处理客户数据

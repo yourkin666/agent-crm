@@ -13,12 +13,14 @@
     "logs": "node scripts/view-logs.js",
     "logs:list": "node scripts/view-logs.js list",
     "logs:tail": "node scripts/view-logs.js tail",
-    "logs:error": "node scripts/view-logs.js error"
+    "logs:error": "node scripts/view-logs.js error",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
     "@ant-design/nextjs-registry": "^1.1.0",
-    "@types/node": "^20.8.0",
     "@types/react": "^18.2.25",
     "@types/react-dom": "^18.2.11",
     "antd": "^5.11.0",
@@ -36,10 +38,15 @@
     "typescript": "^5.2.2"
   },
   "devDependencies": {
+    "@types/node": "^24.2.1",
+    "@vitest/coverage-v8": "^1.6.1",
     "autoprefixer": "^10.4.16",
     "eslint": "^8.51.0",
     "eslint-config-next": "^14.0.0",
+    "jsdom": "^26.1.0",
     "postcss": "^8.4.31",
-    "tailwindcss": "^3.3.5"
+    "tailwindcss": "^3.3.5",
+    "vite-tsconfig-paths": "^4.3.2",
+    "vitest": "^1.6.1"
   }
 }

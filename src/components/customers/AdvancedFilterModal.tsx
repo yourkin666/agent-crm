@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Form, Select, Tag } from 'antd';
+import { Modal, Button, Form, Select, Tag, Input } from 'antd';
 import { CustomerFilterParams } from '@/types';
 import { 
   CUSTOMER_STATUS_TEXT, 
@@ -260,6 +260,14 @@ export default function AdvancedFilterModal({
               </Select>
             </Form.Item>
           </div>
+
+          {/* 托管ID */}
+          <div className="filter-section">
+            <h4 className="filter-section-title">托管ID</h4>
+            <Form.Item name="botId">
+              <Input placeholder="输入托管ID" allowClear />
+            </Form.Item>
+          </div>
         </Form>
       </div>
 
@@ -309,4 +317,4 @@ export default function AdvancedFilterModal({
       `}</style>
     </Modal>
   );
-} 
+}

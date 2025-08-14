@@ -33,6 +33,7 @@ interface ViewingRecordFilterParams {
     viewer_name?: string;
     date_from?: string;
     date_to?: string;
+    botId?: string;
 }
 
 export default function ViewingRecordsPage() {
@@ -432,6 +433,13 @@ export default function ViewingRecordsPage() {
                             <Input 
                                 placeholder="输入物业地址" 
                                 style={{ width: 150 }}
+                            />
+                        </Form.Item>
+                        <Form.Item name="botId">
+                            <Input 
+                                placeholder="托管ID" 
+                                style={{ width: 150 }}
+                                allowClear
                             />
                         </Form.Item>
                         <Form.Item name="viewing_status">
