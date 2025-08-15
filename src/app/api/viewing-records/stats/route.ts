@@ -18,7 +18,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   requestLogger.info({
     method: 'GET',
     url: '/api/viewing-records/stats',
-    userAgent: request.headers.get('user-agent'),
+          userAgent: request.headers?.get('user-agent') || 'unknown',
     requestId
   }, 'API请求开始 - 获取带看记录统计');
 

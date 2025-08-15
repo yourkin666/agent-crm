@@ -236,7 +236,6 @@ export interface CustomerFilterParams extends PaginationParams {
   city?: string | string[]; // 城市，支持多选
   move_in_days?: number; // 入住天数范围（如7日内）
   viewing_today?: boolean; // 今日看房
-  my_entries?: boolean; // 我录入的
   botId?: string; // 托管ID（工作人员/机器人账号 ID）
 }
 

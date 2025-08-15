@@ -19,11 +19,8 @@ interface AdvancedFilterModalProps {
 
 // 快捷筛选选项
 const QUICK_FILTERS = [
-  { key: 'beijing', label: '北京', value: { city: ['北京'] } },
-  { key: 'shenzhen', label: '深圳', value: { city: ['深圳'] } },
   { key: 'move_in_7days', label: '7日内入住', value: { move_in_days: 7 } },
   { key: 'viewing_today', label: '今日看房', value: { viewing_today: true } },
-  { key: 'my_entries', label: '我录入的', value: { my_entries: true } },
 ];
 
 // 录入账号选项（根据实际系统用户配置）
@@ -64,16 +61,7 @@ export default function AdvancedFilterModal({
       
       Object.entries(value).forEach(([filterKey, filterValue]) => {
         if (currentFilters[filterKey as keyof CustomerFilterParams] !== filterValue) {
-          // 对于数组类型的城市筛选，需要特殊处理
-          if (filterKey === 'city' && Array.isArray(filterValue)) {
-            const currentCity = currentFilters.city;
-            if (!currentCity || !Array.isArray(currentCity) || 
-                !filterValue.every(city => currentCity.includes(city))) {
-              isSelected = false;
-            }
-          } else {
-            isSelected = false;
-          }
+          isSelected = false;
         }
       });
       
@@ -87,14 +75,19 @@ export default function AdvancedFilterModal({
 
   // 处理快捷筛选点击
   const handleQuickFilterToggle = (quickFilterKey: string) => {
+    console.log('快捷筛选点击:', quickFilterKey);
     const quickFilter = QUICK_FILTERS.find(f => f.key === quickFilterKey);
-    if (!quickFilter) return;
+    if (!quickFilter) {
+      console.log('未找到快捷筛选:', quickFilterKey);
+      return;
+    }
 
     const newFilters = { ...filters };
     let newSelectedQuickFilters = [...selectedQuickFilters];
 
     if (selectedQuickFilters.includes(quickFilterKey)) {
       // 取消选择
+      console.log('取消选择快捷筛选:', quickFilterKey);
       newSelectedQuickFilters = newSelectedQuickFilters.filter(key => key !== quickFilterKey);
       
       // 移除对应的筛选条件
@@ -103,6 +96,7 @@ export default function AdvancedFilterModal({
       });
     } else {
       // 选择
+      console.log('选择快捷筛选:', quickFilterKey, quickFilter.value);
       newSelectedQuickFilters.push(quickFilterKey);
       
       // 添加对应的筛选条件
@@ -111,6 +105,7 @@ export default function AdvancedFilterModal({
       });
     }
 
+    console.log('新的筛选条件:', newFilters);
     setSelectedQuickFilters(newSelectedQuickFilters);
     setFilters(newFilters);
     form.setFieldsValue(newFilters);

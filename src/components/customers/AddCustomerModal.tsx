@@ -105,6 +105,17 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
           </Col>
           <Col span={12}>
             <Form.Item
+              name="nickname"
+              label="客户昵称"
+            >
+              <Input placeholder="请输入客户昵称" />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
               name="phone"
               label="手机号"
               rules={[
@@ -114,14 +125,14 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
               <Input placeholder="请输入手机号" />
             </Form.Item>
           </Col>
-        </Row>
-
-        <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="backup_phone" label="备用手机">
               <Input placeholder="请输入备用手机号" />
             </Form.Item>
           </Col>
+        </Row>
+
+        <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="wechat" label="微信">
               <Input placeholder="请输入微信号" />

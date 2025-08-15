@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Modal, Tabs, Row, Col, Tag, Table, Empty, Spin, Button, App
 } from 'antd';
@@ -39,7 +39,7 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
   const { message } = App.useApp();
 
   // 加载客户的带看记录
-  const loadViewingRecords = async (customerId: number) => {
+  const loadViewingRecords = useCallback(async (customerId: number) => {
     setLoading(true);
     try {
       const response = await fetch(`/api/customers/${customerId}/viewing-records`);
@@ -56,14 +56,14 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
 
   // 当弹窗打开且有客户数据时，加载带看记录
   useEffect(() => {
     if (visible && customer) {
       loadViewingRecords(customer.id);
     }
-  }, [visible, customer]);
+  }, [visible, customer, loadViewingRecords]);
 
   // 当activeTab变化时更新当前活动标签
   useEffect(() => {
@@ -196,7 +196,7 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
               <Col span={12}>
                 <div className="info-item">
                   <div className="info-label">客户昵称</div>
-                  <div className="info-value">{customer.name}</div>
+                  <div className="info-value">{customer.nickname || '--'}</div>
                 </div>
               </Col>
               <Col span={12}>

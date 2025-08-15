@@ -71,7 +71,6 @@ describe('api/customers GET (filters & response)', () => {
 			is_agent: '[true,false]',
 			move_in_days: '7',
 			viewing_today: 'true',
-			my_entries: 'true',
 			botId: 'botA',
 		});
 
@@ -90,7 +89,7 @@ describe('api/customers GET (filters & response)', () => {
 		expect(capturedBaseQuery).toContain('CAST(SUBSTR');
 		expect(capturedBaseQuery).toContain('INSTR(price_range');
 		expect(capturedBaseQuery).toContain('SELECT DISTINCT customer_id');
-		expect(capturedBaseQuery).toContain('creator = ?');
+
 
 		expect(Array.isArray(capturedParams)).toBe(true);
 		expect(capturedParams.length).toBeGreaterThan(0);

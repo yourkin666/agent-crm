@@ -67,6 +67,10 @@
   @apply font-medium text-gray-900 text-sm mb-1;
 }
 
+.customer-nickname {
+  @apply text-gray-500 text-xs ml-1;
+}
+
 .customer-phone {
   @apply text-gray-600 text-xs;
 }

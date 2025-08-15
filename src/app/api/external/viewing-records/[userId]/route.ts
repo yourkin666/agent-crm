@@ -38,7 +38,7 @@ export const GET = withErrorHandler(async (request: NextRequest, { params }: { p
   requestLogger.info({
     method: 'GET',
     url: `/api/external/viewing-records/${userId}`,
-    userAgent: request.headers.get('user-agent'),
+          userAgent: request.headers?.get('user-agent') || 'unknown',
     userId,
     queryParams: {
       page,

@@ -183,7 +183,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   requestLogger.info({
     method: 'POST',
     url: '/api/external/viewing-records',
-    userAgent: request.headers.get('user-agent'),
+          userAgent: request.headers?.get('user-agent') || 'unknown',
     requestId
   }, '外部API请求开始 - 录入带看记录数据');
 
@@ -635,6 +635,33 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
           updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `, [customerId as number, customerId as number, customerId as number]);
+
+      // 检查是否需要联动更新客户状态
+      // 检查该客户是否有任何带看记录的反馈为'已成交'
+      const hasDealFeedback = await dbManager.queryOne<{ count: number }>(
+        'SELECT COUNT(*) as count FROM qft_ai_viewing_records WHERE customer_id = ? AND viewing_feedback = 1',
+        [customerId as number]
+      );
+      
+      if (hasDealFeedback && hasDealFeedback.count > 0) {
+        // 当客户有任何带看记录的反馈为'已成交'时，将客户状态更新为'已成交未结佣'
+        const customerUpdateSql = `
+          UPDATE qft_ai_customers 
+          SET status = 4, updated_at = CURRENT_TIMESTAMP 
+          WHERE id = ? AND status != 4
+        `;
+        
+        const customerResult = await dbManager.execute(customerUpdateSql, [customerId as number]);
+        
+        if (customerResult.changes > 0) {
+          requestLogger.info({
+            viewingRecordId: viewingResult.lastInsertRowid,
+            customerId: customerId,
+            dealCount: hasDealFeedback.count,
+            requestId
+          }, '客户状态已联动更新为已成交未结佣（基于所有带看记录）');
+        }
+      }
 
       requestLogger.info({
         statusCode: 201,

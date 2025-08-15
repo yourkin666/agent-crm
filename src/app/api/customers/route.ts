@@ -65,7 +65,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     method: 'GET',
     url: '/api/customers',
     query: Object.fromEntries(searchParams.entries()),
-    userAgent: request.headers.get('user-agent')
+    userAgent: request.headers?.get('user-agent') || 'unknown'
   }, 'API请求开始 - 获取客户列表');
 
   // 解析查询参数
@@ -85,7 +85,6 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     city: parseFilterParam(searchParams.get('city'), 'string') as CustomerFilterParams['city'],
     move_in_days: searchParams.get('move_in_days') ? parseInt(searchParams.get('move_in_days')!) : undefined,
     viewing_today: searchParams.get('viewing_today') === 'true',
-    my_entries: searchParams.get('my_entries') === 'true',
     botId: searchParams.get('botId') || undefined,
   };
 
@@ -99,8 +98,8 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const params: (string | number | boolean)[] = [];
 
   if (filters.name) {
-    conditions.push('name LIKE ?');
-    params.push(`%${filters.name}%`);
+    conditions.push('(name LIKE ? OR nickname LIKE ? OR phone LIKE ? OR backup_phone LIKE ?)');
+    params.push(`%${filters.name}%`, `%${filters.name}%`, `%${filters.name}%`, `%${filters.name}%`);
   }
 
   if (filters.phone) {
@@ -111,9 +110,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   // 状态筛选（支持多选）
   if (filters.status) {
     if (Array.isArray(filters.status)) {
-      const placeholders = filters.status.map(() => '?').join(', ');
-      conditions.push(`status IN (${placeholders})`);
-      params.push(...filters.status);
+      if (filters.status.length > 0) {
+        const placeholders = filters.status.map(() => '?').join(', ');
+        conditions.push(`status IN (${placeholders})`);
+        params.push(...filters.status);
+      }
+      // 如果数组为空，跳过这个条件
     } else {
       conditions.push('status = ?');
       params.push(filters.status);
@@ -123,9 +125,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   // 来源渠道筛选（支持多选）
   if (filters.source_channel) {
     if (Array.isArray(filters.source_channel)) {
-      const placeholders = filters.source_channel.map(() => '?').join(', ');
-      conditions.push(`source_channel IN (${placeholders})`);
-      params.push(...filters.source_channel);
+      if (filters.source_channel.length > 0) {
+        const placeholders = filters.source_channel.map(() => '?').join(', ');
+        conditions.push(`source_channel IN (${placeholders})`);
+        params.push(...filters.source_channel);
+      }
+      // 如果数组为空，跳过这个条件
     } else {
       conditions.push('source_channel = ?');
       params.push(filters.source_channel);
@@ -135,11 +140,14 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   // 业务类型筛选（支持多选）
   if (filters.business_type) {
     if (Array.isArray(filters.business_type)) {
-      const businessConditions = filters.business_type.map(() => 'business_type LIKE ?').join(' OR ');
-      conditions.push(`(${businessConditions})`);
-      filters.business_type.forEach(type => {
-        params.push(`%"${type}"%`);
-      });
+      if (filters.business_type.length > 0) {
+        const businessConditions = filters.business_type.map(() => 'business_type LIKE ?').join(' OR ');
+        conditions.push(`(${businessConditions})`);
+        filters.business_type.forEach(type => {
+          params.push(`%"${type}"%`);
+        });
+      }
+      // 如果数组为空，跳过这个条件
     } else {
       conditions.push('business_type LIKE ?');
       params.push(`%"${filters.business_type}"%`);
@@ -149,9 +157,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   // 录入人筛选（支持多选）
   if (filters.creator) {
     if (Array.isArray(filters.creator)) {
-      const placeholders = filters.creator.map(() => '?').join(', ');
-      conditions.push(`creator IN (${placeholders})`);
-      params.push(...filters.creator);
+      if (filters.creator.length > 0) {
+        const placeholders = filters.creator.map(() => '?').join(', ');
+        conditions.push(`creator IN (${placeholders})`);
+        params.push(...filters.creator);
+      }
+      // 如果数组为空，跳过这个条件
     } else {
       conditions.push('creator = ?');
       params.push(filters.creator);
@@ -161,9 +172,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   // 录入方式筛选（支持多选）
   if (filters.is_agent !== undefined) {
     if (Array.isArray(filters.is_agent)) {
-      const placeholders = filters.is_agent.map(() => '?').join(', ');
-      conditions.push(`is_agent IN (${placeholders})`);
-      params.push(...filters.is_agent.map(val => val ? 1 : 0));
+      if (filters.is_agent.length > 0) {
+        const placeholders = filters.is_agent.map(() => '?').join(', ');
+        conditions.push(`is_agent IN (${placeholders})`);
+        params.push(...filters.is_agent.map(val => val ? 1 : 0));
+      }
+      // 如果数组为空，跳过这个条件
     } else {
       conditions.push('is_agent = ?');
       params.push(filters.is_agent ? 1 : 0);
@@ -173,11 +187,14 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   // 城市筛选（支持多选）
   if (filters.city) {
     if (Array.isArray(filters.city)) {
-      const cityConditions = filters.city.map(() => 'community LIKE ?').join(' OR ');
-      conditions.push(`(${cityConditions})`);
-      filters.city.forEach(city => {
-        params.push(`%${city}%`);
-      });
+      if (filters.city.length > 0) {
+        const cityConditions = filters.city.map(() => 'community LIKE ?').join(' OR ');
+        conditions.push(`(${cityConditions})`);
+        filters.city.forEach(city => {
+          params.push(`%${city}%`);
+        });
+      }
+      // 如果数组为空，跳过这个条件
     } else {
       conditions.push('community LIKE ?');
       params.push(`%${filters.city}%`);
@@ -221,10 +238,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
   // 入住时间筛选（X日内入住）
   if (filters.move_in_days) {
+    const today = new Date();
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() + filters.move_in_days);
-    conditions.push('move_in_date <= ?');
-    params.push(targetDate.toISOString().split('T')[0]);
+    
+    conditions.push('move_in_date >= ? AND move_in_date <= ?');
+    params.push(today.toISOString().split('T')[0], targetDate.toISOString().split('T')[0]);
   }
 
   // 今日看房筛选
@@ -232,17 +251,12 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     const today = new Date().toISOString().split('T')[0];
     conditions.push(`id IN (
       SELECT DISTINCT customer_id FROM qft_ai_viewing_records 
-      WHERE DATE(created_at) = ?
+      WHERE DATE(viewing_time) = ?
     )`);
     params.push(today);
   }
 
-  // 我录入的筛选（需要传入当前用户信息，这里暂时使用固定值）
-  if (filters.my_entries) {
-    // TODO: 从session或token中获取当前用户
-    conditions.push('creator = ?');
-    params.push('admin'); // 临时使用admin作为当前用户
-  }
+
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
  
@@ -389,7 +403,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   requestLogger.info({
     method: 'POST',
     url: '/api/customers',
-    userAgent: request.headers.get('user-agent'),
+    userAgent: request.headers?.get('user-agent') || 'unknown',
     requestId
   }, 'API请求开始 - 创建新客户');
 
@@ -430,14 +444,15 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   // 插入新客户，为必填字段提供默认值
   const insertSql = `
     INSERT INTO qft_ai_customers (
-      name, phone, backup_phone, wechat, status, community,
+      name, nickname, phone, backup_phone, wechat, status, community,
       business_type, room_type, room_tags, move_in_date, lease_period,
       price_range, source_channel, creator, is_agent
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
 
   const params = [
     body.name || '未填写',                    // 默认姓名
+    body.nickname || null,                    // 客户昵称
     body.phone || null,                       // 手机号可以为空
     body.backup_phone || null,
     body.wechat || null,
@@ -541,7 +556,7 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
   requestLogger.info({
     method: 'PUT',
     url: '/api/customers',
-    userAgent: request.headers.get('user-agent'),
+    userAgent: request.headers?.get('user-agent') || 'unknown',
     requestId
   }, 'API请求开始 - 更新客户信息');
 
@@ -606,7 +621,7 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
   // 更新客户信息
   const updateSql = `
     UPDATE qft_ai_customers SET 
-      name = ?, phone = ?, backup_phone = ?, wechat = ?, status = ?, community = ?,
+      name = ?, nickname = ?, phone = ?, backup_phone = ?, wechat = ?, status = ?, community = ?,
       business_type = ?, room_type = ?, room_tags = ?, move_in_date = ?, lease_period = ?,
       price_range = ?, source_channel = ?, is_agent = ?, updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
@@ -614,6 +629,7 @@ export const PUT = withErrorHandler(async (request: NextRequest) => {
 
   const params = [
     body.name || '未填写',                    // 默认姓名
+    body.nickname || null,                    // 客户昵称
     body.phone || null,                       // 手机号可以为空
     body.backup_phone || null,
     body.wechat || null,

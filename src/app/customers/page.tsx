@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Table, Button, Space, Tag, Input, Form, Row, Col,
-    Card, Statistic, Pagination, App
+    Card, Statistic, Pagination, App, Modal
 } from 'antd';
 import {
     PlusOutlined, SearchOutlined, EyeOutlined,
-    EditOutlined, CalendarOutlined, ReloadOutlined
+    EditOutlined, CalendarOutlined, ReloadOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import MainLayout from '@/components/layout/MainLayout';
@@ -28,7 +28,13 @@ import { formatPhone, formatDate, formatMoney, formatBusinessTypes, formatRoomTy
 export default function CustomersPage() {
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(false);
-    const [totalCommission, setTotalCommission] = useState(0); // 总佣金
+    const [statsLoading, setStatsLoading] = useState(false);
+    const [stats, setStats] = useState({
+        total: 0,
+        following: 0,    // 跟进中
+        completed: 0,    // 已成交
+        totalCommission: 0
+    });
     const [pagination, setPagination] = useState({
         current: 1,
         pageSize: DEFAULT_PAGE_SIZE,
@@ -77,7 +83,6 @@ export default function CustomersPage() {
 
             if (result.success && result.data) {
                 setCustomers(result.data.data);
-                setTotalCommission(result.data.totalCommission || 0); // 设置总佣金
                 setPagination(prev => ({
                     ...prev,
                     current: result.data!.page,
@@ -95,15 +100,52 @@ export default function CustomersPage() {
         }
     }, [filters, message]);
 
+    // 加载统计数据
+    const loadStats = useCallback(async (params?: Partial<CustomerFilterParams>) => {
+        setStatsLoading(true);
+        try {
+            const searchParams = new URLSearchParams();
+            const finalParams = { ...filters, ...params };
+
+            Object.entries(finalParams).forEach(([key, value]) => {
+                if (value !== undefined && value !== null && value !== '') {
+                    // 对于数组类型的参数，需要序列化为JSON字符串
+                    if (Array.isArray(value)) {
+                        searchParams.append(key, JSON.stringify(value));
+                    } else {
+                        searchParams.append(key, String(value));
+                    }
+                }
+            });
+
+            const response = await fetch(`/api/customers/stats?${searchParams.toString()}`);
+            const result: ApiResponse<typeof stats> = await response.json();
+
+            if (result.success && result.data) {
+                setStats(result.data);
+            } else {
+                message.error(result.error || '获取统计数据失败');
+            }
+        } catch (error) {
+            console.error('加载统计数据失败:', error);
+            message.error('网络请求失败');
+        } finally {
+            setStatsLoading(false);
+        }
+    }, [filters, message]);
+
     // 处理高级筛选
     const handleAdvancedFilter = (advancedFilters: Partial<CustomerFilterParams>) => {
+        console.log('高级筛选确认:', advancedFilters);
         const newFilters = {
             ...filters,
             ...advancedFilters,
             page: 1, // 重置到第一页
         };
+        console.log('合并后的筛选条件:', newFilters);
         setFilters(newFilters as unknown as CustomerFilterParams);
         loadCustomers(newFilters);
+        loadStats(newFilters);
     };
 
     // 显示高级筛选模态框
@@ -136,7 +178,8 @@ export default function CustomersPage() {
 
     useEffect(() => {
         loadCustomers();
-    }, [loadCustomers]);
+        loadStats();
+    }, [loadCustomers, loadStats]);
 
     // 搜索处理
     const handleSearch = (values: Record<string, unknown>) => {
@@ -153,20 +196,13 @@ export default function CustomersPage() {
         delete newFilters.phone;
 
         if (searchText) {
-            // 判断是否为手机号（纯数字且长度为11位）
-            const isPhoneNumber = /^1[3-9]\d{9}$/.test(searchText);
-            
-            if (isPhoneNumber) {
-                // 如果是手机号格式，按手机号搜索
-                newFilters.phone = searchText;
-            } else {
-                // 否则按姓名搜索
-                newFilters.name = searchText;
-            }
+            // 统一使用name参数进行多字段模糊搜索
+            newFilters.name = searchText;
         }
 
         setFilters(newFilters as unknown as CustomerFilterParams);
         loadCustomers(newFilters);
+        loadStats(newFilters);
     };
 
     // 重置搜索
@@ -178,11 +214,13 @@ export default function CustomersPage() {
         };
         setFilters(newFilters as unknown as CustomerFilterParams);
         loadCustomers(newFilters);
+        loadStats(newFilters);
     };
 
     // 刷新数据
     const handleRefresh = () => {
         loadCustomers(filters);
+        loadStats(filters);
     };
 
     // 分页处理
@@ -209,8 +247,9 @@ export default function CustomersPage() {
 
     // 新增客户成功回调
     const handleAddSuccess = () => {
-        // 重新加载客户列表
+        // 重新加载客户列表和统计数据
         loadCustomers(filters);
+        loadStats(filters);
     };
 
     // 编辑客户
@@ -221,8 +260,9 @@ export default function CustomersPage() {
 
     // 编辑客户成功回调
     const handleEditSuccess = () => {
-        // 重新加载客户列表
+        // 重新加载客户列表和统计数据
         loadCustomers(filters);
+        loadStats(filters);
     };
 
     // 添加带看记录
@@ -233,8 +273,9 @@ export default function CustomersPage() {
 
     // 添加带看记录成功回调
     const handleAddViewingSuccess = () => {
-        // 重新加载客户列表以更新带看次数和佣金
+        // 重新加载客户列表和统计数据以更新带看次数和佣金
         loadCustomers(filters);
+        loadStats(filters);
     };
 
     // 查看带看记录详情 - 打开客户详情并切换到带看记录标签页
@@ -243,15 +284,50 @@ export default function CustomersPage() {
         setDetailModalVisible(true);
     };
 
+    // 删除客户
+    const handleDeleteCustomer = async (customer: Customer) => {
+        Modal.confirm({
+            title: '确认删除',
+            content: `确定要删除客户"${customer.name}"吗？此操作不可恢复，将同时删除该客户的所有带看记录。`,
+            okText: '确认删除',
+            okType: 'danger',
+            cancelText: '取消',
+            onOk: async () => {
+                try {
+                    const response = await fetch(`/api/customers/${customer.id}`, {
+                        method: 'DELETE',
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        message.success('客户及相关带看记录删除成功');
+                        // 重新加载客户列表
+                        loadCustomers(filters);
+                    } else {
+                        message.error(result.error || '删除客户失败');
+                    }
+                } catch (error) {
+                    console.error('删除客户失败:', error);
+                    message.error('网络请求失败');
+                }
+            },
+        });
+    };
+
     // 表格列定义
     const columns: ColumnsType<Customer> = [
         {
             title: '租客',
             key: 'customer',
-            width: 130,
+            width: 150,
             render: (_, record) => (
                 <div className="customer-info">
-                    <div className="customer-name">{record.name}</div>
+                    <div className="customer-name">
+                        {record.name}
+                        {record.nickname && record.nickname !== record.name && (
+                            <span className="customer-nickname">({record.nickname})</span>
+                        )}
+                    </div>
                     <div className="customer-phone">{formatPhone(record.phone)}</div>
                 </div>
             ),
@@ -341,7 +417,7 @@ export default function CustomersPage() {
         {
             title: '操作',
             key: 'actions',
-            width: 160,
+            width: 200,
             fixed: 'right',
             render: (_, record) => (
                 <div className="action-buttons compact">
@@ -372,6 +448,16 @@ export default function CustomersPage() {
                     >
                         添加带看
                     </Button>
+                    <Button
+                        type="text"
+                        icon={<DeleteOutlined />}
+                        size="small"
+                        onClick={() => handleDeleteCustomer(record)}
+                        className="action-button danger"
+                        danger
+                    >
+                        删除
+                    </Button>
                 </div>
             ),
         },
@@ -387,9 +473,10 @@ export default function CustomersPage() {
                             <Card className="stats-card hover-card">
                                 <Statistic
                                     title="总客户数"
-                                    value={pagination.total}
+                                    value={stats.total}
                                     valueStyle={{ color: '#3b82f6' }}
                                     prefix={<div className="w-2 h-2 bg-blue-500 rounded-full inline-block mr-2"></div>}
+                                    loading={statsLoading}
                                 />
                             </Card>
                         </Col>
@@ -397,9 +484,10 @@ export default function CustomersPage() {
                             <Card className="stats-card hover-card">
                                 <Statistic
                                     title="跟进中"
-                                    value={customers.filter(c => c.status === 1).length}
+                                    value={stats.following}
                                     valueStyle={{ color: '#10b981' }}
                                     prefix={<div className="w-2 h-2 bg-green-500 rounded-full inline-block mr-2"></div>}
+                                    loading={statsLoading}
                                 />
                             </Card>
                         </Col>
@@ -407,9 +495,10 @@ export default function CustomersPage() {
                             <Card className="stats-card hover-card">
                                 <Statistic
                                     title="已成交"
-                                    value={customers.filter(c => c.status === 4 || c.status === 5).length}
+                                    value={stats.completed}
                                     valueStyle={{ color: '#8b5cf6' }}
                                     prefix={<div className="w-2 h-2 bg-purple-500 rounded-full inline-block mr-2"></div>}
+                                    loading={statsLoading}
                                 />
                             </Card>
                         </Col>
@@ -417,11 +506,12 @@ export default function CustomersPage() {
                             <Card className="stats-card hover-card">
                                 <Statistic
                                     title="总佣金"
-                                    value={totalCommission}
+                                    value={stats.totalCommission}
                                     precision={2}
                                     suffix="元"
                                     valueStyle={{ color: '#f59e0b' }}
                                     prefix={<div className="w-2 h-2 bg-amber-500 rounded-full inline-block mr-2"></div>}
+                                    loading={statsLoading}
                                 />
                             </Card>
                         </Col>
@@ -513,12 +603,7 @@ export default function CustomersPage() {
                                             <span className="remove-tag" onClick={() => removeFilter('viewing_today')}>×</span>
                                         </span>
                                     )}
-                                    {filters.my_entries && (
-                                        <span className="filter-tag">
-                                            我录入的 
-                                            <span className="remove-tag" onClick={() => removeFilter('my_entries')}>×</span>
-                                        </span>
-                                    )}
+
                                 </Space>
                             </Form.Item>
                         </div>

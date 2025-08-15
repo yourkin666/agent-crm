@@ -22,7 +22,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       url: '/api/housing/property-addresses',
       keyword,
       limit,
-      userAgent: request.headers.get('user-agent'),
+      userAgent: request.headers?.get('user-agent') || 'unknown',
       requestId
     }, '调用物业地址查询API');
     

@@ -24,7 +24,7 @@ export const GET = withErrorHandler(async (
       url: `/api/property/${propertyAddrId}`,
       propertyAddrId,
       query: Object.fromEntries(searchParams.entries()),
-      userAgent: request.headers.get('user-agent'),
+      userAgent: request.headers?.get('user-agent') || 'unknown',
       requestId
     }, '调用物业详细地址查询API');
 

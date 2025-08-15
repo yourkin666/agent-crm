@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Table, Button, Space, Tag, Input, Select, Form, Row, Col,
-    Card, Statistic, Pagination, App
+    Card, Statistic, Pagination, App, Modal
 } from 'antd';
 import {
     SearchOutlined, EyeOutlined,
-    EditOutlined, ReloadOutlined
+    EditOutlined, ReloadOutlined, DeleteOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import MainLayout from '@/components/layout/MainLayout';
@@ -221,6 +221,37 @@ export default function ViewingRecordsPage() {
         fetchViewingStats(filters);
     };
 
+    // 删除带看记录
+    const handleDeleteRecord = async (record: ViewingRecord) => {
+        Modal.confirm({
+            title: '确认删除',
+            content: `确定要删除这条带看记录吗？此操作不可恢复。`,
+            okText: '确认删除',
+            okType: 'danger',
+            cancelText: '取消',
+            onOk: async () => {
+                try {
+                    const response = await fetch(`/api/viewing-records/${record.id}`, {
+                        method: 'DELETE',
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        message.success('带看记录删除成功');
+                        // 重新加载数据
+                        fetchViewingRecords(filters);
+                        fetchViewingStats(filters);
+                    } else {
+                        message.error(result.error || '删除带看记录失败');
+                    }
+                } catch (error) {
+                    console.error('删除带看记录失败:', error);
+                    message.error('网络请求失败');
+                }
+            },
+        });
+    };
+
     // 表格列定义
     const columns: ColumnsType<ViewingRecord> = [
         {
@@ -326,7 +357,7 @@ export default function ViewingRecordsPage() {
         {
             title: '操作',
             key: 'action',
-            width: 150,
+            width: 200,
             fixed: 'right',
             render: (_, record) => (
                 <Space size="small">
@@ -347,6 +378,16 @@ export default function ViewingRecordsPage() {
                         className="action-button warning"
                     >
                         编辑
+                    </Button>
+                    <Button
+                        type="text"
+                        icon={<DeleteOutlined />}
+                        size="small"
+                        onClick={() => handleDeleteRecord(record)}
+                        className="action-button danger"
+                        danger
+                    >
+                        删除
                     </Button>
                 </Space>
             ),
@@ -377,7 +418,7 @@ export default function ViewingRecordsPage() {
                     <Col span={6}>
                         <Card>
                             <Statistic 
-                                title="已完成" 
+                                title="已带看" 
                                 value={stats.completed_records}
                                 valueStyle={{ color: '#3f8600' }}
                                 loading={statsLoading}
@@ -387,7 +428,7 @@ export default function ViewingRecordsPage() {
                     <Col span={6}>
                         <Card>
                             <Statistic 
-                                title="待处理" 
+                                title="待确认" 
                                 value={stats.pending_records}
                                 valueStyle={{ color: '#cf1322' }}
                                 loading={statsLoading}

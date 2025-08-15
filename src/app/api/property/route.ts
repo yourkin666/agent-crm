@@ -15,7 +15,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     requestLogger.info({
       method: 'GET',
       url: '/api/property',
-      userAgent: request.headers.get('user-agent'),
+      userAgent: request.headers?.get('user-agent') || 'unknown',
       requestId
     }, '调用小区查询API...');
 

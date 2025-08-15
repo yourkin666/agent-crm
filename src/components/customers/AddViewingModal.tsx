@@ -236,6 +236,12 @@ function AddViewingModalInner({ visible, customer, onCancel, onSuccess }: AddVie
               detailAddressLoading ? <Spin size="small" /> : 
               selectedPropertyId ? '暂无详细地址数据' : '请先选择物业地址'
             }
+            dropdownStyle={{
+              minWidth: '300px',
+              maxWidth: '600px',
+              width: 'auto'
+            }}
+            dropdownMatchSelectWidth={false}
           />
         </Form.Item>
 

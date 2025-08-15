@@ -231,6 +231,12 @@ export default function CommunityAutoComplete({
       notFoundContent={loading ? <Spin size="small" /> : '暂无数据'}
       allowClear
       filterOption={false}  // 禁用默认过滤，使用我们自己的搜索逻辑
+      dropdownStyle={{
+        minWidth: '300px',
+        maxWidth: '600px',
+        width: 'auto'
+      }}
+      dropdownMatchSelectWidth={false}
     />
   );
 } 

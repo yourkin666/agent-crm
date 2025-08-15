@@ -28,7 +28,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   requestLogger.info({
     method: 'POST',
     url: '/api/external/customers',
-    userAgent: request.headers.get('user-agent'),
+          userAgent: request.headers?.get('user-agent') || 'unknown',
     requestId
   }, '外部API请求开始 - 录入客户数据');
 

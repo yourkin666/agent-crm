@@ -226,7 +226,19 @@ export const DELETE = withErrorHandler(async (
       throw createNotFoundError('客户');
     }
 
-    // 删除客户（注意：由于外键约束，相关的带看记录会自动设置customer_id为NULL）
+    // 先删除与该客户相关的所有带看记录
+    const viewingRecordsResult = await dbManager.execute(
+      'DELETE FROM qft_ai_viewing_records WHERE customer_id = ?',
+      [customerId]
+    );
+
+    requestLogger.info({
+      customerId,
+      requestId,
+      deletedViewingRecords: viewingRecordsResult.changes
+    }, '已删除客户相关的带看记录');
+
+    // 删除客户
     const result = await dbManager.execute(
       'DELETE FROM qft_ai_customers WHERE id = ?',
       [customerId]
@@ -238,8 +250,9 @@ export const DELETE = withErrorHandler(async (
 
     requestLogger.info({
       customerId,
-      requestId
-    }, '成功删除客户');
+      requestId,
+      deletedViewingRecords: viewingRecordsResult.changes
+    }, '成功删除客户及相关带看记录');
 
     return NextResponse.json({
       success: true,

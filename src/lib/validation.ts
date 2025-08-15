@@ -50,6 +50,9 @@ export function validateCustomerData(data: Record<string, unknown>): void {
   if (data.name) {
     validateStringLength(data.name as string, 50, '客户姓名');
   }
+  if (data.nickname) {
+    validateStringLength(data.nickname as string, 50, '客户昵称');
+  }
   if (data.wechat) {
     validateStringLength(data.wechat as string, 50, '微信号');
   }

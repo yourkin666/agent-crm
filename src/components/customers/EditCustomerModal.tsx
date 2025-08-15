@@ -130,6 +130,14 @@ export default function EditCustomerModal({ visible, customer, onCancel, onSucce
             </Col>
             <Col span={12}>
               <Form.Item
+                name="nickname"
+                label="客户昵称"
+              >
+                <Input placeholder="请输入客户昵称" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
                 name="status"
                 label="客户状态"
               >
