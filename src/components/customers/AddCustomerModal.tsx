@@ -14,7 +14,7 @@ import {
 import CommunityAutoComplete from './CommunityAutoComplete';
 import PriceRangeInput from './PriceRangeInput';
 
-const { Option } = Select;
+
 
 interface AddCustomerModalProps {
   visible: boolean;
@@ -154,13 +154,13 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
               name="status"
               label="客户状态"
             >
-              <Select placeholder="请选择客户状态">
-                {Object.entries(CUSTOMER_STATUS_TEXT).map(([value, label]) => (
-                  <Option key={value} value={parseInt(value)}>
-                    {label}
-                  </Option>
-                ))}
-              </Select>
+              <Select 
+                placeholder="请选择客户状态"
+                options={Object.entries(CUSTOMER_STATUS_TEXT).map(([value, label]) => ({
+                  label,
+                  value: parseInt(value)
+                }))}
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -175,11 +175,11 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
                 mode="multiple"
                 placeholder="请选择业务类型"
                 allowClear
-              >
-                {Object.entries(BUSINESS_TYPE_TEXT).map(([key, value]) => (
-                  <Option key={key} value={key}>{value}</Option>
-                ))}
-              </Select>
+                options={Object.entries(BUSINESS_TYPE_TEXT).map(([key, value]) => ({
+                  label: value,
+                  value: key
+                }))}
+              />
             </Form.Item>
           </Col>
           <Col span={8}>
@@ -191,11 +191,11 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
                 mode="multiple"
                 placeholder="请选择户型"
                 allowClear
-              >
-                {Object.entries(ROOM_TYPE_TEXT).map(([key, value]) => (
-                  <Option key={key} value={key}>{value}</Option>
-                ))}
-              </Select>
+                options={Object.entries(ROOM_TYPE_TEXT).map(([key, value]) => ({
+                  label: value,
+                  value: key
+                }))}
+              />
             </Form.Item>
           </Col>
           <Col span={8}>
@@ -207,11 +207,11 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
                 mode="multiple"
                 placeholder="选择房型标签"
                 allowClear
-              >
-                {Object.entries(ROOM_TAG_TEXT).map(([key, value]) => (
-                  <Option key={key} value={key}>{value}</Option>
-                ))}
-              </Select>
+                options={Object.entries(ROOM_TAG_TEXT).map(([key, value]) => ({
+                  label: value,
+                  value: key
+                }))}
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -228,13 +228,14 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
           </Col>
           <Col span={12}>
             <Form.Item name="lease_period" label="租赁周期">
-              <Select placeholder="请选择租赁周期" allowClear>
-                {Object.entries(LEASE_PERIOD_TEXT).map(([value, label]) => (
-                  <Option key={value} value={parseInt(value)}>
-                    {label}
-                  </Option>
-                ))}
-              </Select>
+              <Select 
+                placeholder="请选择租赁周期" 
+                allowClear
+                options={Object.entries(LEASE_PERIOD_TEXT).map(([value, label]) => ({
+                  label,
+                  value: parseInt(value)
+                }))}
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -250,11 +251,13 @@ export default function AddCustomerModal({ visible, onCancel, onSuccess }: AddCu
               name="source_channel"
               label="来源渠道"
             >
-              <Select placeholder="请选择来源渠道">
-                {Object.entries(SOURCE_CHANNEL_TEXT).map(([key, value]) => (
-                  <Option key={key} value={key}>{value}</Option>
-                ))}
-              </Select>
+              <Select 
+                placeholder="请选择来源渠道"
+                options={Object.entries(SOURCE_CHANNEL_TEXT).map(([key, value]) => ({
+                  label: value,
+                  value: key
+                }))}
+              />
             </Form.Item>
           </Col>
         </Row>
