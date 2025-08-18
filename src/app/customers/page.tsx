@@ -161,8 +161,15 @@ export default function CustomersPage() {
     };
 
     // 刷新数据
-    const handleRefresh = () => {
-        handleLoadData(filters);
+    const handleRefresh = async () => {
+        try {
+            await Promise.all([
+                loadCustomers(filters),
+                loadStats(filters)
+            ]);
+        } catch (error) {
+            console.error('刷新失败:', error);
+        }
     };
 
     // 分页处理
