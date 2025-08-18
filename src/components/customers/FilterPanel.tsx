@@ -55,7 +55,15 @@ export default function FilterPanel({
                             <Button onClick={onReset}>
                                 清空
                             </Button>
-                            <Button icon={<ReloadOutlined />} onClick={onRefresh}>
+                            <Button 
+                                icon={<ReloadOutlined />} 
+                                onClick={() => {
+                                    console.log('🖱️ 刷新按钮被点击');
+                                    onRefresh();
+                                }}
+                                type="default"
+                                size="middle"
+                            >
                                 刷新
                             </Button>
                             

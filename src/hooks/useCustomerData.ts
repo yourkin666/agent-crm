@@ -25,6 +25,7 @@ interface UseCustomerDataReturn {
     loadCustomers: (params?: Partial<CustomerFilterParams>) => Promise<void>;
     loadStats: (params?: Partial<CustomerFilterParams>) => Promise<void>;
     updatePagination: (page: number, pageSize: number) => void;
+    clearCache: () => void; // 新增：清除缓存方法
 }
 
 export function useCustomerData(): UseCustomerDataReturn {
@@ -49,16 +50,19 @@ export function useCustomerData(): UseCustomerDataReturn {
     // 缓存机制
     const cacheRef = useRef<Map<string, { data: unknown; timestamp: number }>>(new Map());
 
-
     const getCacheKey = (url: string) => {
         return `customer_data_${url}`;
     };
 
-
-
     const setCachedData = (key: string, data: unknown) => {
         cacheRef.current.set(key, { data, timestamp: Date.now() });
     };
+
+    // 新增：清除缓存方法
+    const clearCache = useCallback(() => {
+        cacheRef.current.clear();
+        console.log('🗑️ 缓存已清除');
+    }, []);
 
     const loadCustomers = useCallback(async (params?: Partial<CustomerFilterParams>) => {
         const getCachedData = (key: string) => {
@@ -68,6 +72,7 @@ export function useCustomerData(): UseCustomerDataReturn {
             }
             return null;
         };
+        console.log('📊 开始加载客户数据...', { params });
         setLoading(true);
         try {
             const searchParams = new URLSearchParams();
@@ -86,25 +91,33 @@ export function useCustomerData(): UseCustomerDataReturn {
             const url = `/api/customers?${searchParams.toString()}`;
             const cacheKey = getCacheKey(url);
             
-            // 检查缓存
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const cachedData = getCachedData(cacheKey) as any;
-            if (cachedData) {
-                setCustomers(cachedData.data);
-                setPagination(prev => ({
-                    ...prev,
-                    current: cachedData.page,
-                    total: cachedData.total,
-                    pageSize: cachedData.pageSize,
-                }));
-                setLoading(false);
-                return;
+            // 检查缓存 - 如果是刷新操作（包含时间戳参数），则跳过缓存
+            const isRefreshOperation = finalParams._t !== undefined;
+            if (!isRefreshOperation) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const cachedData = getCachedData(cacheKey) as any;
+                if (cachedData) {
+                    setCustomers(cachedData.data);
+                    setPagination(prev => ({
+                        ...prev,
+                        current: cachedData.page,
+                        total: cachedData.total,
+                        pageSize: cachedData.pageSize,
+                    }));
+                    setLoading(false);
+                    return;
+                }
             }
 
             const response = await fetch(url);
             const result: ApiResponse<PaginatedResponse<Customer>> = await response.json();
 
             if (result.success && result.data) {
+                console.log('✅ 客户数据加载成功', { 
+                    total: result.data.total, 
+                    count: result.data.data.length,
+                    isRefresh: params?._t !== undefined 
+                });
                 setCustomers(result.data.data);
                 setPagination(prev => ({
                     ...prev,
@@ -140,6 +153,7 @@ export function useCustomerData(): UseCustomerDataReturn {
             }
             return null;
         };
+        console.log('📈 开始加载统计数据...', { params });
         setStatsLoading(true);
         try {
             const searchParams = new URLSearchParams();
@@ -158,19 +172,26 @@ export function useCustomerData(): UseCustomerDataReturn {
             const url = `/api/customers/stats?${searchParams.toString()}`;
             const cacheKey = getCacheKey(url);
             
-            // 检查缓存
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const cachedData = getCachedData(cacheKey) as any;
-            if (cachedData) {
-                setStats(cachedData);
-                setStatsLoading(false);
-                return;
+            // 检查缓存 - 如果是刷新操作（包含时间戳参数），则跳过缓存
+            const isRefreshOperation = finalParams._t !== undefined;
+            if (!isRefreshOperation) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const cachedData = getCachedData(cacheKey) as any;
+                if (cachedData) {
+                    setStats(cachedData);
+                    setStatsLoading(false);
+                    return;
+                }
             }
 
             const response = await fetch(url);
             const result: ApiResponse<typeof stats> = await response.json();
 
             if (result.success && result.data) {
+                console.log('✅ 统计数据加载成功', { 
+                    stats: result.data,
+                    isRefresh: params?._t !== undefined 
+                });
                 setStats(result.data);
                 setCachedData(cacheKey, result.data);
             }
@@ -202,5 +223,6 @@ export function useCustomerData(): UseCustomerDataReturn {
         loadCustomers,
         loadStats,
         updatePagination,
+        clearCache, // 新增：返回清除缓存方法
     };
 } 

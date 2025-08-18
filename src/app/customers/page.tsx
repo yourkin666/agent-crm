@@ -68,7 +68,8 @@ export default function CustomersPage() {
         statsLoading,
         loadCustomers,
         loadStats,
-        updatePagination
+        updatePagination,
+        clearCache
     } = useCustomerData();
 
     // 模态框状态
@@ -96,6 +97,7 @@ export default function CustomersPage() {
             page: 1,
         };
         setFilters(newFilters as unknown as CustomerFilterParams);
+        clearCache();
         handleLoadData(newFilters);
     };
 
@@ -122,6 +124,7 @@ export default function CustomersPage() {
         
         newFilters.page = 1;
         setFilters(newFilters as CustomerFilterParams);
+        clearCache();
         handleLoadData(newFilters);
     };
 
@@ -146,6 +149,7 @@ export default function CustomersPage() {
         }
 
         setFilters(newFilters as unknown as CustomerFilterParams);
+        clearCache();
         handleLoadData(newFilters);
     };
 
@@ -157,18 +161,34 @@ export default function CustomersPage() {
             pageSize: DEFAULT_PAGE_SIZE,
         };
         setFilters(newFilters as unknown as CustomerFilterParams);
+        clearCache();
         handleLoadData(newFilters);
     };
 
     // 刷新数据
     const handleRefresh = async () => {
+        console.log('🔄 开始刷新数据...', { filters });
         try {
+            // 清除缓存并重新加载数据
+            clearCache();
+            const timestamp = Date.now();
+            const paramsWithTimestamp = {
+                ...filters,
+                _t: timestamp // 添加时间戳参数来避免缓存
+            };
+            
+            console.log('📡 发送刷新请求...', { paramsWithTimestamp });
+            
             await Promise.all([
-                loadCustomers(filters),
-                loadStats(filters)
+                loadCustomers(paramsWithTimestamp),
+                loadStats(paramsWithTimestamp)
             ]);
+            
+            console.log('✅ 数据刷新完成');
+            message.success('数据刷新成功');
         } catch (error) {
-            console.error('刷新失败:', error);
+            console.error('❌ 刷新失败:', error);
+            message.error('刷新失败，请重试');
         }
     };
 
@@ -181,6 +201,7 @@ export default function CustomersPage() {
         };
         setFilters(newFilters as unknown as CustomerFilterParams);
         updatePagination(page, pageSize);
+        clearCache();
         handleLoadData(newFilters);
     };
 
@@ -196,7 +217,10 @@ export default function CustomersPage() {
     };
 
     // 新增客户成功回调
-    const handleAddSuccess = () => handleLoadData(filters);
+    const handleAddSuccess = () => {
+        clearCache();
+        handleLoadData(filters);
+    };
 
     // 编辑客户
     const handleEditCustomer = (customer: Customer) => {
@@ -205,7 +229,10 @@ export default function CustomersPage() {
     };
 
     // 编辑客户成功回调
-    const handleEditSuccess = () => handleLoadData(filters);
+    const handleEditSuccess = () => {
+        clearCache();
+        handleLoadData(filters);
+    };
 
     // 添加带看记录
     const handleAddViewing = (customer: Customer) => {
@@ -214,7 +241,10 @@ export default function CustomersPage() {
     };
 
     // 添加带看记录成功回调
-    const handleAddViewingSuccess = () => handleLoadData(filters);
+    const handleAddViewingSuccess = () => {
+        clearCache();
+        handleLoadData(filters);
+    };
 
     // 查看带看记录详情 - 打开客户详情并切换到带看记录标签页
     const handleViewingDetails = (customer: Customer) => {
@@ -224,7 +254,8 @@ export default function CustomersPage() {
 
     // 删除客户
     const handleDeleteCustomer = async (customer: Customer) => {
-        Modal.confirm({
+        const { confirm } = Modal;
+        confirm({
             title: '确认删除',
             content: `确定要删除客户"${customer.name}"吗？此操作不可恢复，将同时删除该客户的所有带看记录。`,
             okText: '确认删除',
@@ -239,6 +270,9 @@ export default function CustomersPage() {
 
                     if (result.success) {
                         message.success('客户及相关带看记录删除成功');
+                        // 清除缓存，确保获取最新数据
+                        clearCache();
+                        // 重新加载数据
                         handleLoadData(filters);
                     } else {
                         message.error(result.error || '删除客户失败');

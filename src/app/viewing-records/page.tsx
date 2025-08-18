@@ -224,7 +224,8 @@ export default function ViewingRecordsPage() {
 
     // 删除带看记录
     const handleDeleteRecord = async (record: ViewingRecord) => {
-        Modal.confirm({
+        const { confirm } = Modal;
+        confirm({
             title: '确认删除',
             content: `确定要删除这条带看记录吗？此操作不可恢复。`,
             okText: '确认删除',

@@ -237,6 +237,7 @@ export interface CustomerFilterParams extends PaginationParams {
   move_in_days?: number; // 入住天数范围（如7日内）
   viewing_today?: boolean; // 今日看房
   botId?: string; // 托管ID（工作人员/机器人账号 ID）
+  _t?: number; // 时间戳参数，用于刷新操作绕过缓存
 }
 
  
