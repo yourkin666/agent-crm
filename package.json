@@ -5,9 +5,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
     "start": "next start",
+    "build": "next build",
     "lint": "next lint",
+    "quick-start": "./scripts/start-dev.sh",
     "db:setup": "node scripts/setup-database.js",
     "db:reset": "echo '请手动清空MySQL数据库表，然后运行 npm run db:setup' && exit 1",
     "logs": "node scripts/view-logs.js",
@@ -16,7 +17,8 @@
     "logs:error": "node scripts/view-logs.js error",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "perf-test": "node scripts/performance-test.js"
   },
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
