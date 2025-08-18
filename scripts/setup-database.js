@@ -83,14 +83,17 @@ async function setupDatabase() {
     const insertViewingRecordSQL = `
       INSERT INTO qft_ai_viewing_records (
         customer_id, viewing_time, property_name, property_address,
-        room_type, room_tag, viewer_name, viewing_status, viewing_feedback, commission, notes, business_type
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        room_type, room_tag, viewer_name, viewing_status, viewing_feedback, commission, notes, business_type, cityName
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
+    const cities = ['北京', '北京市', '上海', '上海市', '广州', '广州市', '深圳', '深圳市', '杭州', '杭州市'];
+    
     for (let i = 1; i <= 20; i++) {
       const customerId = Math.ceil(Math.random() * 5); // 只有5个客户
       const viewingDate = new Date(2024, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1);
       const viewerTypes = ['internal', 'external', 'external_sales', 'creator'];
+      const randomCity = cities[Math.floor(Math.random() * cities.length)];
 
       await connection.execute(insertViewingRecordSQL, [
         customerId,
@@ -104,7 +107,8 @@ async function setupDatabase() {
         Math.floor(Math.random() * 2),
         Math.floor(Math.random() * 5000) + 1000,
         `测试备注${i}`,
-        ['whole_rent', 'centralized', 'shared_rent'][Math.floor(Math.random() * 3)]
+        ['whole_rent', 'centralized', 'shared_rent'][Math.floor(Math.random() * 3)],
+        randomCity
       ]);
     }
 

@@ -25,7 +25,7 @@ function parseFilterParam(value: string | null, type: 'string' | 'number' | 'boo
   if (!value) return undefined;
   
   try {
-    // 尝试解析为数组
+    // 尝试解析为JSON数组
     const parsed = JSON.parse(value);
     if (Array.isArray(parsed)) {
       return parsed.map(item => {
@@ -43,7 +43,15 @@ function parseFilterParam(value: string | null, type: 'string' | 'number' | 'boo
       default: return parsed;
     }
   } catch {
-    // 解析失败，按单值处理
+    // JSON解析失败，检查是否为逗号分隔的字符串
+    if (type === 'string' && value.includes(',')) {
+      const items = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
+      if (items.length > 1) {
+        return items;
+      }
+    }
+    
+    // 按单值处理
     switch (type) {
       case 'number': return parseInt(value);
       case 'boolean': return value === 'true';
@@ -90,7 +98,9 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
   requestLogger.debug({
     filters,
-    requestId
+    requestId,
+    rawCityParam: searchParams.get('city'),
+    parsedCity: filters.city
   }, '查询参数解析完成');
 
   // 构建 WHERE 条件
@@ -184,20 +194,37 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     }
   }
 
-  // 城市筛选（支持多选）
+  // 城市筛选（支持多选）- 基于带看记录的城市
   if (filters.city) {
+      requestLogger.info({
+    cityFilter: filters.city,
+    isArray: Array.isArray(filters.city),
+    requestId
+  }, '城市筛选条件处理');
+    
     if (Array.isArray(filters.city)) {
       if (filters.city.length > 0) {
-        const cityConditions = filters.city.map(() => 'community LIKE ?').join(' OR ');
-        conditions.push(`(${cityConditions})`);
+        const cityConditions = filters.city.map(() => '(vr.cityName LIKE ? OR vr.cityName LIKE ? OR vr.cityName = ?)').join(' OR ');
+        conditions.push(`EXISTS (SELECT 1 FROM qft_ai_viewing_records vr WHERE vr.customer_id = qft_ai_customers.id AND (${cityConditions}))`);
         filters.city.forEach(city => {
-          params.push(`%${city}%`);
+          // 支持多种城市名称格式：原名称、原名称+市、原名称+市+省
+          params.push(`%${city}%`, `${city}市`, city);
         });
+        requestLogger.debug({
+          cityConditions,
+          cityParams: filters.city.map(city => [`%${city}%`, `${city}市`, city]),
+          requestId
+        }, '城市筛选SQL条件已添加');
       }
       // 如果数组为空，跳过这个条件
     } else {
-      conditions.push('community LIKE ?');
-      params.push(`%${filters.city}%`);
+      conditions.push('EXISTS (SELECT 1 FROM qft_ai_viewing_records vr WHERE vr.customer_id = qft_ai_customers.id AND (vr.cityName LIKE ? OR vr.cityName LIKE ? OR vr.cityName = ?))');
+      params.push(`%${filters.city}%`, `${filters.city}市`, filters.city);
+      requestLogger.debug({
+        singleCityCondition: `EXISTS (SELECT 1 FROM qft_ai_viewing_records vr WHERE vr.customer_id = id AND (vr.cityName LIKE ? OR vr.cityName LIKE ? OR vr.cityName = ?))`,
+        cityParam: [`%${filters.city}%`, `${filters.city}市`, filters.city],
+        requestId
+      }, '单城市筛选SQL条件已添加');
     }
   }
 
@@ -249,9 +276,10 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   // 今日看房筛选
   if (filters.viewing_today) {
     const today = new Date().toISOString().split('T')[0];
-    conditions.push(`id IN (
-      SELECT DISTINCT customer_id FROM qft_ai_viewing_records 
-      WHERE DATE(viewing_time) = ?
+    conditions.push(`EXISTS (
+      SELECT 1 FROM qft_ai_viewing_records vr2
+      WHERE vr2.customer_id = qft_ai_customers.id
+      AND DATE(vr2.viewing_time) = ?
     )`);
     params.push(today);
   }
@@ -259,6 +287,13 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
 
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  
+  requestLogger.info({
+    whereClause,
+    conditions,
+    params,
+    requestId
+  }, 'SQL查询条件构建完成');
  
   // 构建基础查询和计数查询
   const baseQuery = `
@@ -266,53 +301,58 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       SELECT * FROM qft_ai_customers 
       ${whereClause}
     ) AS c
-    LEFT JOIN (
-      SELECT * FROM qft_ai_customers 
-      ${whereClause}
-    ) AS c2
-      ON c.userId IS NOT NULL
-     AND c.userId = c2.userId
-     AND COALESCE(c.botId, '-1') = COALESCE(c2.botId, '-1')
-     AND (c2.created_at > c.created_at OR (c2.created_at = c.created_at AND c2.id > c.id))
-    WHERE c2.id IS NULL
     ORDER BY c.created_at DESC
   `;
   
+
+  
+  requestLogger.info({
+    baseQuery,
+    params,
+    requestId
+  }, '基础查询SQL构建完成');
+  
+  // 临时：测试简化查询
+  if (filters.city) {
+    // 测试1：只做城市筛选，不去重
+    const cityParam = Array.isArray(filters.city) ? filters.city[0] : filters.city;
+    const testQuery1 = `
+      SELECT * FROM qft_ai_customers 
+      WHERE EXISTS (SELECT 1 FROM qft_ai_viewing_records vr WHERE vr.customer_id = id AND (vr.cityName LIKE ? OR vr.cityName LIKE ? OR vr.cityName = ?))
+      LIMIT 5
+    `;
+    try {
+      const testResult1 = await dbManager.query(testQuery1, [`%${cityParam}%`, `${cityParam}市`, cityParam]);
+      requestLogger.info({
+        testResult1Count: testResult1.length,
+        testResult1Ids: testResult1.map((r: Record<string, unknown>) => r.id),
+        testResult1UserIds: testResult1.map((r: Record<string, unknown>) => r.userId),
+        cityParam,
+        requestId
+      }, '测试查询1结果（只城市筛选）');
+    } catch (error) {
+      requestLogger.error({
+        error: error instanceof Error ? error.message : error,
+        requestId
+      }, '测试查询失败');
+    }
+  }
+  
+
+  
   const countQuery = `
     SELECT COUNT(*) as count FROM (
-      SELECT c.id FROM (
-        SELECT * FROM qft_ai_customers 
-        ${whereClause}
-      ) AS c
-      LEFT JOIN (
-        SELECT * FROM qft_ai_customers 
-        ${whereClause}
-      ) AS c2
-        ON c.userId IS NOT NULL
-       AND c.userId = c2.userId
-       AND COALESCE(c.botId, '-1') = COALESCE(c2.botId, '-1')
-       AND (c2.created_at > c.created_at OR (c2.created_at = c.created_at AND c2.id > c.id))
-      WHERE c2.id IS NULL
-    ) AS deduped
+      SELECT * FROM qft_ai_customers 
+      ${whereClause}
+    ) AS c
   `;
 
   // 计算符合筛选条件并去重后的总佣金
   const totalCommissionQuery = `
-    SELECT COALESCE(SUM(d.total_commission), 0) as total_commission FROM (
-      SELECT c.* FROM (
-        SELECT * FROM qft_ai_customers 
-        ${whereClause}
-      ) AS c
-      LEFT JOIN (
-        SELECT * FROM qft_ai_customers 
-        ${whereClause}
-      ) AS c2
-        ON c.userId IS NOT NULL
-       AND c.userId = c2.userId
-       AND COALESCE(c.botId, '-1') = COALESCE(c2.botId, '-1')
-       AND (c2.created_at > c.created_at OR (c2.created_at = c.created_at AND c2.id > c.id))
-      WHERE c2.id IS NULL
-    ) AS d
+    SELECT COALESCE(SUM(c.total_commission), 0) as total_commission FROM (
+      SELECT * FROM qft_ai_customers 
+      ${whereClause}
+    ) AS c
   `;
 
   try {
@@ -322,20 +362,19 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       requestId
     }, '开始执行数据库查询');
 
-    // 使用分页查询助手（参数需要重复两次，因为子查询使用了两次 where 条件）
-    const dedupeParams = [...params, ...params];
+    // 使用分页查询助手（参数只需要一次，因为去重逻辑中不再重复应用筛选条件）
     const result = await dbManager.queryWithPagination<CustomerRow>(
       baseQuery,
       countQuery,
-      dedupeParams,
+      params,
       filters.page,
       filters.pageSize
     );
 
-    // 获取总佣金（同样需要重复参数）
+    // 获取总佣金
     const totalCommissionResult = await dbManager.queryOne<{ total_commission: number }>(
       totalCommissionQuery,
-      dedupeParams
+      params
     );
 
     // 处理客户数据

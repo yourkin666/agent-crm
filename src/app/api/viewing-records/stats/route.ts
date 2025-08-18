@@ -27,6 +27,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   // 解析查询参数（支持筛选条件下的统计）
   const customer_name = searchParams.get('customer_name') || '';
   const property_name = searchParams.get('property_name') || '';
+  const cityName = searchParams.get('cityName') || '';
   const viewing_status = searchParams.get('viewing_status') || '';
   const business_type = searchParams.get('business_type') || '';
   const viewer_name = searchParams.get('viewer_name') || '';
@@ -47,6 +48,11 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     if (property_name) {
       whereConditions.push('property_name LIKE ?');
       queryParams.push(`%${property_name}%`);
+    }
+
+    if (cityName) {
+      whereConditions.push('cityName LIKE ?');
+      queryParams.push(`${cityName}%`);
     }
 
     if (viewing_status) {

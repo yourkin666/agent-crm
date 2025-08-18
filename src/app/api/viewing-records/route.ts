@@ -9,6 +9,11 @@ function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+function normalizeCityName(name?: string | null): string | null {
+  if (!name) return null;
+  return name.endsWith('市') ? name : `${name}市`;
+}
+
 export const dynamic = 'force-dynamic';
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
@@ -30,6 +35,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const pageSize = parseInt(searchParams.get('pageSize') || '10');
   const customer_name = searchParams.get('customer_name') || '';
   const property_name = searchParams.get('property_name') || '';
+  const cityName = searchParams.get('cityName') || '';
   const viewing_status = searchParams.get('viewing_status') || '';
   const business_type = searchParams.get('business_type') || '';
   const viewer_name = searchParams.get('viewer_name') || '';
@@ -38,7 +44,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
   const botId = searchParams.get('botId') || '';
 
   requestLogger.debug({
-    page, pageSize, customer_name, property_name, viewing_status,
+    page, pageSize, customer_name, property_name, cityName, viewing_status,
     business_type, viewer_name, date_from, date_to, botId, requestId
   }, '查询参数解析完成');
 
@@ -55,6 +61,11 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     if (property_name) {
       whereConditions.push('property_name LIKE ?');
       queryParams.push(`%${property_name}%`);
+    }
+
+    if (cityName) {
+      whereConditions.push('cityName LIKE ?');
+      queryParams.push(`${cityName}%`);
     }
 
     if (viewing_status) {
@@ -105,6 +116,7 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
         viewing_time,
         property_name,
         property_address,
+        cityName,
         room_type,
         room_tag,
         viewer_name,
@@ -194,6 +206,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     viewing_time,
     property_name,
     property_address,
+    cityName,
     room_type,
     room_tag,
     viewer_name,
@@ -203,6 +216,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     business_type,
     notes
   } = body;
+
+  const normalizedCityName = normalizeCityName(cityName);
 
   try {
     // 如果提供了客户ID，检查客户是否存在并获取客户信息
@@ -240,16 +255,17 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     // 插入带看记录，为必填字段提供默认值
     const result = await dbManager.execute(`
       INSERT INTO qft_ai_viewing_records (
-        customer_id, viewing_time, property_name, property_address,
+        customer_id, viewing_time, property_name, property_address, cityName,
         room_type, room_tag, viewer_name, 
         viewing_status, commission, viewing_feedback, business_type, notes,
         customer_name, customer_phone, userId, botId
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       customer_id || null,                         // 允许为空
       viewing_time ? new Date(viewing_time).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' '),    // 转换为MySQL datetime格式
       property_name || '未填写楼盘',                // 默认楼盘名
       property_address || null,
+      normalizedCityName,                          // 城市名称（统一补“市”）
       room_type || 'one_bedroom',                  // 默认房型
       room_tag || null,
       viewer_name || 'internal',                   // 默认带看人类型

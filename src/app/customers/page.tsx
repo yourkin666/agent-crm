@@ -62,6 +62,7 @@ export default function CustomersPage() {
 
     // 加载客户数据
     const loadCustomers = useCallback(async (params?: Partial<CustomerFilterParams>) => {
+        console.log('loadCustomers 被调用，参数:', params);
         setLoading(true);
         try {
             const searchParams = new URLSearchParams();
@@ -78,6 +79,7 @@ export default function CustomersPage() {
                 }
             });
 
+            console.log('loadCustomers API URL:', `/api/customers?${searchParams.toString()}`);
             const response = await fetch(`/api/customers?${searchParams.toString()}`);
             const result: ApiResponse<PaginatedResponse<Customer>> = await response.json();
 
@@ -102,6 +104,7 @@ export default function CustomersPage() {
 
     // 加载统计数据
     const loadStats = useCallback(async (params?: Partial<CustomerFilterParams>) => {
+        console.log('loadStats 被调用，参数:', params);
         setStatsLoading(true);
         try {
             const searchParams = new URLSearchParams();
@@ -118,6 +121,7 @@ export default function CustomersPage() {
                 }
             });
 
+            console.log('loadStats API URL:', `/api/customers/stats?${searchParams.toString()}`);
             const response = await fetch(`/api/customers/stats?${searchParams.toString()}`);
             const result: ApiResponse<typeof stats> = await response.json();
 
@@ -573,6 +577,11 @@ export default function CustomersPage() {
                                             {city} <span className="remove-tag" onClick={() => removeFilter('city', city)}>×</span>
                                         </span>
                                     ))}
+                                    {filters.city && !Array.isArray(filters.city) && (
+                                        <span className="filter-tag">
+                                            {filters.city} <span className="remove-tag" onClick={() => removeFilter('city')}>×</span>
+                                        </span>
+                                    )}
                                     {filters.status && Array.isArray(filters.status) && filters.status.map(status => (
                                         <span key={status} className="filter-tag">
                                             {CUSTOMER_STATUS_TEXT[status as keyof typeof CUSTOMER_STATUS_TEXT]} 

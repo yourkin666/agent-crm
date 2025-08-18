@@ -8,6 +8,11 @@ function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+function normalizeCityName(name?: string | null): string | null {
+  if (!name) return null;
+  return name.endsWith('市') ? name : `${name}市`;
+}
+
 // 外部房源查询API接口
 interface PropertyInfo {
   id: number;
@@ -429,7 +434,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
       houseAreaId: externalPropertyInfo?.houseAreaId || houseAreaId,
       houseAreaName: externalPropertyInfo?.houseAreaName || houseAreaName,
       cityId: externalPropertyInfo?.cityId || cityId,
-      cityName: externalPropertyInfo?.cityName || cityName,
+      cityName: normalizeCityName(externalPropertyInfo?.cityName || cityName),
       propertyAddrId: externalPropertyInfo?.propertyAddrId || propertyAddrId,
       unitType: externalPropertyInfo?.unitType || unitType,
       longitude: externalPropertyInfo?.longitude || longitude,

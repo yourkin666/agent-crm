@@ -9,7 +9,7 @@ import { Customer } from '@/types';
 import {
   BUSINESS_TYPE_TEXT_BY_STRING, ROOM_TYPE_TEXT_BY_STRING, 
   ROOM_TAG_TEXT_BY_STRING, VIEWER_TYPE_TEXT_BY_STRING,
-  VIEWING_STATUS_TEXT
+  VIEWING_STATUS_TEXT, CITY_LIST
 } from '@/utils/constants';
 import CommunityAutoComplete from './CommunityAutoComplete';
 
@@ -178,7 +178,7 @@ function AddViewingModalInner({ visible, customer, onCancel, onSuccess }: AddVie
       onCancel={handleCancel}
       onOk={() => form.submit()}
       confirmLoading={loading}
-      width={600}
+      width={700}
       destroyOnHidden
     >
       <Form
@@ -208,6 +208,21 @@ function AddViewingModalInner({ visible, customer, onCancel, onSuccess }: AddVie
             </Form.Item>
           </Col>
           <Col span={12}>
+            <Form.Item
+              name="cityName"
+              label="城市"
+            >
+              <Select placeholder="请选择城市" showSearch allowClear>
+                {CITY_LIST.map(city => (
+                  <Option key={city} value={city}>{city}</Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={16}>
+          <Col span={24}>
             <Form.Item
               name="property_name"
               label="物业地址"
@@ -273,7 +288,7 @@ function AddViewingModalInner({ visible, customer, onCancel, onSuccess }: AddVie
         </Row>
 
         <Row gutter={16}>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item
               name="room_tag"
               label="房型标签"
@@ -285,7 +300,7 @@ function AddViewingModalInner({ visible, customer, onCancel, onSuccess }: AddVie
               </Select>
             </Form.Item>
           </Col>
-          <Col span={12}>
+          <Col span={8}>
             <Form.Item
               name="viewer_name"
               label="带看人"
@@ -294,6 +309,17 @@ function AddViewingModalInner({ visible, customer, onCancel, onSuccess }: AddVie
                 {Object.entries(VIEWER_TYPE_TEXT_BY_STRING).map(([key, value]) => (
                   <Option key={key} value={key}>{value}</Option>
                 ))}
+              </Select>
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              name="viewing_feedback"
+              label="带看反馈"
+            >
+              <Select placeholder="请选择带看反馈" allowClear>
+                <Option value={0}>未成交</Option>
+                <Option value={1}>已成交</Option>
               </Select>
             </Form.Item>
           </Col>
@@ -328,20 +354,6 @@ function AddViewingModalInner({ visible, customer, onCancel, onSuccess }: AddVie
                 precision={2}
                 addonAfter="元"
               />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="viewing_feedback"
-              label="带看反馈"
-            >
-              <Select placeholder="请选择带看反馈" allowClear>
-                <Option value={0}>未成交</Option>
-                <Option value={1}>已成交</Option>
-              </Select>
             </Form.Item>
           </Col>
         </Row>

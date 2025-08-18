@@ -45,6 +45,7 @@ export const GET = withErrorHandler(async (
         vr.viewing_time,
         vr.property_name,
         vr.property_address,
+        vr.cityName,
         vr.room_type,
         vr.room_tag,
         vr.viewer_name,

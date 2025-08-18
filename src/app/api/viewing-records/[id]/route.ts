@@ -11,6 +11,11 @@ function generateRequestId(): string {
   return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+function normalizeCityName(name?: string | null): string | null {
+  if (!name) return null;
+  return name.endsWith('市') ? name : `${name}市`;
+}
+
 // GET /api/viewing-records/[id] - 获取单个带看记录详情
 export const GET = withErrorHandler(async (request: NextRequest, { params }: { params: { id: string } }) => {
   const requestId = generateRequestId();
@@ -130,6 +135,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: { p
     updateData: {
       property_name: body.property_name,
       property_address: body.property_address,
+      cityName: body.cityName,
       room_type: body.room_type,
       viewer_name: body.viewer_name,
       viewing_status: body.viewing_status,
@@ -160,6 +166,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: { p
       viewing_time,
       property_name,
       property_address,
+      cityName,
       room_type,
       room_tag,
       viewer_name,
@@ -170,6 +177,8 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: { p
       notes,
     } = body;
 
+    const normalizedCityName = normalizeCityName(cityName);
+
     // 统一时间格式
     const formattedViewingTime = viewing_time ? toMySQLDateTime(viewing_time) : null;
 
@@ -179,6 +188,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: { p
         viewing_time = COALESCE(?, viewing_time),
         property_name = COALESCE(?, property_name),
         property_address = COALESCE(?, property_address),
+        cityName = COALESCE(?, cityName),
         room_type = COALESCE(?, room_type),
         room_tag = COALESCE(?, room_tag),
         viewer_name = COALESCE(?, viewer_name),
@@ -195,6 +205,7 @@ export const PUT = withErrorHandler(async (request: NextRequest, { params }: { p
       formattedViewingTime,
       property_name || null,
       property_address || null,
+      normalizedCityName || null,
       room_type || null,
       room_tag || null,
       viewer_name || null,

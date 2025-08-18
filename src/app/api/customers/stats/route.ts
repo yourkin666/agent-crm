@@ -94,14 +94,29 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
       }
     }
     
-    const city = searchParams.get('city');
-    if (city) {
-      // 处理城市参数，支持单个值或数组
-      const cityValues = city.split(',').map(s => s.trim()).filter(s => s);
-      if (cityValues.length === 1) {
-        filters.city = cityValues[0];
-      } else if (cityValues.length > 1) {
-        filters.city = cityValues;
+    const cityParam = searchParams.get('city');
+    if (cityParam) {
+      // 使用与主API相同的解析逻辑
+      try {
+        // 尝试解析为JSON数组
+        const parsed = JSON.parse(cityParam);
+        if (Array.isArray(parsed)) {
+          filters.city = parsed as string[];
+        } else {
+          filters.city = parsed as string;
+        }
+      } catch {
+        // JSON解析失败，检查是否为逗号分隔的字符串
+        if (cityParam.includes(',')) {
+          const items = cityParam.split(',').map(item => item.trim()).filter(item => item.length > 0);
+          if (items.length > 1) {
+            filters.city = items;
+          } else {
+            filters.city = items[0];
+          }
+        } else {
+          filters.city = cityParam;
+        }
       }
     }
     
@@ -189,13 +204,16 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     if (filters.city) {
       if (Array.isArray(filters.city)) {
         if (filters.city.length > 0) {
-          const placeholders = filters.city.map(() => '?').join(', ');
-          conditions.push(`city IN (${placeholders})`);
-          params.push(...filters.city);
+          const cityConditions = filters.city.map(() => '(vr.cityName LIKE ? OR vr.cityName LIKE ? OR vr.cityName = ?)').join(' OR ');
+          conditions.push(`EXISTS (SELECT 1 FROM qft_ai_viewing_records vr WHERE vr.customer_id = qft_ai_customers.id AND (${cityConditions}))`);
+          filters.city.forEach(city => {
+            // 支持多种城市名称格式：原名称、原名称+市、原名称+市+省
+            params.push(`%${city}%`, `${city}市`, city);
+          });
         }
       } else {
-        conditions.push('city LIKE ?');
-        params.push(`%${filters.city}%`);
+        conditions.push('EXISTS (SELECT 1 FROM qft_ai_viewing_records vr WHERE vr.customer_id = qft_ai_customers.id AND (vr.cityName LIKE ? OR vr.cityName LIKE ? OR vr.cityName = ?))');
+        params.push(`%${filters.city}%`, `${filters.city}市`, filters.city);
       }
     }
 
@@ -210,6 +228,13 @@ export const GET = withErrorHandler(async (request: NextRequest) => {
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    requestLogger.info({
+      whereClause,
+      conditions,
+      params,
+      requestId
+    }, '统计查询SQL条件构建完成');
 
     // 查询各状态的客户数量
     const statsQuery = `

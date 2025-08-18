@@ -100,6 +100,9 @@ export function validateViewingRecordData(data: Record<string, unknown>): void {
   if (data.property_address) {
     validateStringLength(data.property_address as string, 200, '楼盘地址');
   }
+  if (data.cityName) {
+    validateStringLength(data.cityName as string, 50, '城市名称');
+  }
   if (data.notes) {
     validateStringLength(data.notes as string, 500, '备注');
   }

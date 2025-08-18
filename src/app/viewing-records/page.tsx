@@ -17,7 +17,7 @@ import { ViewingRecord, ApiResponse, PaginatedResponse, ViewingRecordStats } fro
 import {
     VIEWING_STATUS_TEXT, VIEWING_STATUS_COLOR, BUSINESS_TYPE_TEXT,
     VIEWER_TYPE_TEXT_BY_STRING, DEFAULT_PAGE_SIZE,
-    ROOM_TYPE_TEXT_BY_STRING, ROOM_TAG_TEXT_BY_STRING
+    ROOM_TYPE_TEXT_BY_STRING, ROOM_TAG_TEXT_BY_STRING, CITY_LIST
 } from '@/utils/constants';
 import { formatDate, formatMoney } from '@/utils/helpers';
 
@@ -28,6 +28,7 @@ interface ViewingRecordFilterParams {
     pageSize?: number;
     customer_name?: string;
     property_name?: string;
+    cityName?: string;
     viewing_status?: number;
     business_type?: string;
     viewer_name?: string;
@@ -270,6 +271,13 @@ export default function ViewingRecordsPage() {
             ellipsis: true,
         },
         {
+            title: '城市',
+            dataIndex: 'cityName',
+            key: 'cityName',
+            width: 100,
+            render: (city: string) => city || '-',
+        },
+        {
             title: '详细地址',
             dataIndex: 'property_address',
             key: 'property_address',
@@ -475,6 +483,18 @@ export default function ViewingRecordsPage() {
                                 placeholder="输入物业地址" 
                                 style={{ width: 150 }}
                             />
+                        </Form.Item>
+                        <Form.Item name="cityName">
+                            <Select 
+                                placeholder="选择城市" 
+                                style={{ width: 120 }}
+                                allowClear
+                                showSearch
+                            >
+                                {CITY_LIST.map(city => (
+                                    <Option key={city} value={city}>{city}</Option>
+                                ))}
+                            </Select>
                         </Form.Item>
                         <Form.Item name="botId">
                             <Input 

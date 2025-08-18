@@ -5,7 +5,8 @@ import { Modal, Button, Form, Select, Tag, Input } from 'antd';
 import { CustomerFilterParams } from '@/types';
 import { 
   CUSTOMER_STATUS_TEXT, 
-  SOURCE_CHANNEL_TEXT
+  SOURCE_CHANNEL_TEXT,
+  CITY_LIST
 } from '@/utils/constants';
 
 const { Option } = Select;
@@ -21,6 +22,8 @@ interface AdvancedFilterModalProps {
 const QUICK_FILTERS = [
   { key: 'move_in_7days', label: '7日内入住', value: { move_in_days: 7 } },
   { key: 'viewing_today', label: '今日看房', value: { viewing_today: true } },
+  { key: 'beijing', label: '北京', value: { city: ['北京'] } },
+  { key: 'shenzhen', label: '深圳', value: { city: ['深圳'] } },
 ];
 
 // 录入账号选项（根据实际系统用户配置）
@@ -250,6 +253,29 @@ export default function AdvancedFilterModal({
                 {ENTRY_ACCOUNTS.map(account => (
                   <Option key={account.value} value={account.value}>
                     {account.label}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </div>
+
+          {/* 城市 */}
+          <div className="filter-section">
+            <h4 className="filter-section-title">城市</h4>
+            <Form.Item name="city">
+              <Select
+                mode="multiple"
+                placeholder="选择城市"
+                allowClear
+                showSearch
+                className="multi-select"
+                filterOption={(input, option) =>
+                  (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
+                }
+              >
+                {CITY_LIST.map(city => (
+                  <Option key={city} value={city}>
+                    {city}
                   </Option>
                 ))}
               </Select>

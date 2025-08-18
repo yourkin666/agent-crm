@@ -88,7 +88,7 @@ describe('api/customers GET (filters & response)', () => {
 		expect(capturedBaseQuery).toContain('botId = ?');
 		expect(capturedBaseQuery).toContain('CAST(SUBSTR');
 		expect(capturedBaseQuery).toContain('INSTR(price_range');
-		expect(capturedBaseQuery).toContain('SELECT DISTINCT customer_id');
+		expect(capturedBaseQuery).toContain('vr2.customer_id = qft_ai_customers.id');
 
 
 		expect(Array.isArray(capturedParams)).toBe(true);

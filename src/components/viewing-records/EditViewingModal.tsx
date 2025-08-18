@@ -6,7 +6,7 @@ import {
 } from 'antd';
 import { ViewingRecord } from '@/types';
 import {
-    BUSINESS_TYPE_TEXT, ROOM_TYPE_TEXT
+    BUSINESS_TYPE_TEXT, ROOM_TYPE_TEXT, CITY_LIST
 } from '@/utils/constants';
 import dayjs, { Dayjs } from 'dayjs';
 
@@ -31,6 +31,7 @@ export default function EditViewingModal({ visible, record, onCancel, onSuccess 
             form.setFieldsValue({
                 property_name: record.property_name,
                 property_address: record.property_address,
+                cityName: record.cityName,
                 viewing_time: record.viewing_time ? dayjs(record.viewing_time) : null,
                 room_type: record.room_type,
                 room_tag: record.room_tag,
@@ -112,6 +113,21 @@ export default function EditViewingModal({ visible, record, onCancel, onSuccess 
                             <Input placeholder="请输入物业地址" />
                         </Form.Item>
                     </Col>
+                    <Col span={12}>
+                        <Form.Item
+                            label="城市"
+                            name="cityName"
+                        >
+                            <Select placeholder="请选择城市" showSearch allowClear>
+                                {CITY_LIST.map(city => (
+                                    <Option key={city} value={city}>{city}</Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+                    </Col>
+                </Row>
+
+                <Row gutter={16}>
                     <Col span={12}>
                         <Form.Item
                             label="详细地址"

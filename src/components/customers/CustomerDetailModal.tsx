@@ -91,6 +91,13 @@ export default function CustomerDetailModal({ visible, customer, onCancel, onEdi
       render: (name: string) => name || '-',
     },
     {
+      title: '城市',
+      dataIndex: 'cityName',
+      key: 'cityName',
+      width: 80,
+      render: (city: string) => city || '-',
+    },
+    {
       title: '户型',
       dataIndex: 'room_type',
       key: 'room_type',

@@ -68,6 +68,9 @@ export default function ViewingDetailModal({ visible, record, onCancel }: Viewin
                     <Descriptions.Item label="物业地址">
                         {record.property_name}
                     </Descriptions.Item>
+                    <Descriptions.Item label="城市">
+                        {record.cityName || '-'}
+                    </Descriptions.Item>
                     <Descriptions.Item label="详细地址">
                         {record.property_address || '-'}
                     </Descriptions.Item>
