@@ -1,21 +1,36 @@
-# 外部 Agent 接口文档
+# 外部 API 接口文档
 
 > 文档更新时间：2025-01-27  
-> 接口版本：v2.0 🆕  
-> 适用于：外部 Agent 系统数据录入和查询  
-> 🆕 新增功能：智能客户处理、外部房源信息自动查询、重复记录智能更新
+> 接口版本：v2.0  
+> 适用于：外部系统集成  
+> 基础 URL：`https://your-domain.com/api/external`
 
 ---
 
 ## 📋 接口概览
 
-本文档描述了为外部 Agent 系统提供的数据录入和查询接口，用于向 CRM 系统录入客户数据、带看记录数据以及查询用户的带看记录。
+本文档描述了为外部系统提供的数据录入和查询接口，支持客户数据管理、带看记录录入和查询功能。
 
 | 接口             | 方法 | 路径                                     | 功能描述                       |
 | ---------------- | ---- | ---------------------------------------- | ------------------------------ |
 | 客户数据录入     | POST | `/api/external/customers`                | 录入或更新客户信息             |
 | 带看记录录入     | POST | `/api/external/viewing-records`          | 录入带看记录并智能处理客户数据 |
 | 用户带看记录查询 | GET  | `/api/external/viewing-records/[userId]` | 根据用户 ID 查询带看记录信息   |
+| 统计数据查询     | GET  | `/api/external/statistics`               | 获取系统统计数据               |
+
+---
+
+## 🔐 错误处理
+
+所有接口都遵循统一的错误响应格式：
+
+```json
+{
+  "success": false,
+  "error": "错误描述",
+  "message": "错误信息"
+}
+```
 
 ---
 
@@ -25,25 +40,12 @@
 
 - **接口地址**: `POST /api/external/customers`
 - **功能描述**: 根据 userId 录入或更新客户信息
-- **业务逻辑**:
-  - 如果 userId 对应的客户已存在，则更新客户信息（使用 COALESCE 函数，只有新值不为空时才更新）
-  - 如果客户不存在，则创建新客户
-- **返回格式**: JSON
 - **幂等性**: ✅ 支持重复调用
 
 ### 请求参数
 
-#### 请求头
-
-```
-Content-Type: application/json
-```
-
-#### 请求体参数
-
 | 参数名           | 类型   | 必填 | 默认值        | 说明                                                                            |
 | ---------------- | ------ | ---- | ------------- | ------------------------------------------------------------------------------- |
-| **基础信息**     |
 | `userId`         | string | ✅   | -             | 用户第三方唯一标识 ID                                                           |
 | `botId`          | string | ❌   | -             | 机器人/工作人员账号 ID                                                          |
 | `nickname`       | string | ❌   | -             | 客户昵称                                                                        |
@@ -51,7 +53,6 @@ Content-Type: application/json
 | `phone`          | string | ❌   | -             | 主手机号（格式：1[3-9]xxxxxxxx）                                                |
 | `backup_phone`   | string | ❌   | -             | 备用手机号                                                                      |
 | `wechat`         | string | ❌   | -             | 微信号                                                                          |
-| **业务信息**     |
 | `status`         | number | ❌   | 1             | 客户状态（1-5：跟进中/不再回复/已约带看/已成交未结佣/已成交已结佣）             |
 | `community`      | string | ❌   | -             | 咨询小区名称                                                                    |
 | `business_type`  | string | ❌   | 'whole_rent'  | 业务类型（whole_rent/shared_rent/centralized）                                  |
@@ -64,7 +65,7 @@ Content-Type: application/json
 | `creator`        | string | ❌   | '外部系统'    | 录入人标识                                                                      |
 | `internal_notes` | string | ❌   | -             | 内部备注                                                                        |
 
-#### 请求示例
+### 请求示例
 
 ```json
 {
@@ -118,75 +119,28 @@ Content-Type: application/json
 }
 ```
 
-#### 错误响应
-
-```json
-{
-  "success": false,
-  "error": "userId为必填字段",
-  "message": "请求数据验证失败"
-}
-```
-
 ---
 
-## 👁️ 2. 带看记录录入接口（智能客户处理 + 外部房源信息自动查询 + 重复记录智能更新）
+## 👁️ 2. 带看记录录入接口
 
 ### 基本信息
 
 - **接口地址**: `POST /api/external/viewing-records`
 - **功能描述**: 录入带看记录数据，自动处理客户信息，并智能查询房源详细信息
-- **🆕 核心功能**:
-  - **智能客户处理**: 自动创建或更新客户信息
-  - **外部房源信息自动查询**: 根据物业地址自动查询详细信息
-  - **重复记录智能更新**: 自动检测并更新重复记录
-  - **客户状态联动更新**: 根据带看反馈自动更新客户状态
-- **返回格式**: JSON
-- **幂等性**: ✅ 支持重复调用
-
-### 核心业务逻辑
-
-#### 1. 客户处理逻辑
-
-- **检查用户**: 根据 `userId` 检查客户是否已存在
-- **存在**: 更新客户信息，返回 `customer_action: "updated"`
-- **不存在**: 创建新客户，返回 `customer_action: "created"`
-
-#### 2. 重复记录检查逻辑
-
-- **有详细地址**: 使用 `userId + property_address` 组合检查
-- **无详细地址**: 使用 `userId + property_name + property_address IS NULL` 组合检查
-- **存在重复**: 更新现有记录，返回 `viewing_record_action: "updated"`
-- **不存在**: 创建新记录，返回 `viewing_record_action: "created"`
-
-#### 3. 外部房源信息查询
-
-- 根据 `property_name` 和 `property_address` 自动查询外部房源 API
-- 成功获取房源信息时自动填充相关字段
-- 查询失败不影响带看记录的正常创建
-
-#### 4. 客户状态联动更新
-
-- 当客户有任何带看记录的反馈为'已成交'时，自动将客户状态更新为'已成交未结佣'
+- **核心功能**:
+  - 智能客户处理：自动创建或更新客户信息
+  - 外部房源信息自动查询：根据物业地址自动查询详细信息
+  - 重复记录智能更新：自动检测并更新重复记录
+  - 客户状态联动更新：根据带看反馈自动更新客户状态
 
 ### 请求参数
 
-#### 请求头
-
-```
-Content-Type: application/json
-```
-
-#### 请求体参数
-
 | 参数名                | 类型   | 必填 | 默认值        | 说明                                         |
 | --------------------- | ------ | ---- | ------------- | -------------------------------------------- |
-| **基础信息**          |
 | `userId`              | string | ✅   | -             | 用户第三方唯一标识 ID                        |
 | `botId`               | string | ❌   | -             | 机器人/工作人员账号 ID                       |
 | `customer_name`       | string | ❌   | -             | 客户姓名                                     |
 | `customer_phone`      | string | ❌   | -             | 客户电话                                     |
-| **带看信息**          |
 | `viewing_time`        | string | ❌   | 当前时间      | 带看时间（ISO 8601 格式）                    |
 | `property_name`       | string | ✅   | -             | 带看楼盘名称                                 |
 | `property_address`    | string | ❌   | -             | 楼盘详细地址                                 |
@@ -198,7 +152,6 @@ Content-Type: application/json
 | `viewing_feedback`    | number | ❌   | -             | 带看反馈（0=未成交, 1=已成交）               |
 | `business_type`       | string | ❌   | 'whole_rent'  | 业务类型                                     |
 | `notes`               | string | ❌   | -             | 备注                                         |
-| **外部房源信息**      |
 | `housingId`           | number | ❌   | -             | 房源 ID                                      |
 | `houseAreaId`         | number | ❌   | -             | 区域 ID                                      |
 | `houseAreaName`       | string | ❌   | -             | 区域名称                                     |
@@ -215,7 +168,7 @@ Content-Type: application/json
 | `companyAbbreviation` | string | ❌   | -             | 公司简称                                     |
 | `houseTypeId`         | number | ❌   | -             | 房型 ID                                      |
 
-#### 请求示例
+### 请求示例
 
 ```json
 {
@@ -281,16 +234,6 @@ Content-Type: application/json
 }
 ```
 
-#### 错误响应
-
-```json
-{
-  "success": false,
-  "error": "userId为必填字段",
-  "message": "请求数据验证失败"
-}
-```
-
 ---
 
 ## 🔍 3. 用户带看记录查询接口
@@ -300,7 +243,6 @@ Content-Type: application/json
 - **接口地址**: `GET /api/external/viewing-records/[userId]`
 - **功能描述**: 根据用户 ID 查询带看记录信息
 - **支持功能**: 分页查询、多条件筛选
-- **返回格式**: JSON
 
 ### 请求参数
 
@@ -323,15 +265,13 @@ Content-Type: application/json
 | `date_from`      | string | ❌   | -      | 开始日期（YYYY-MM-DD） |
 | `date_to`        | string | ❌   | -      | 结束日期（YYYY-MM-DD） |
 
-#### 请求示例
+### 请求示例
 
 ```bash
 GET /api/external/viewing-records/agent_user_12345?page=1&pageSize=10&property_name=万科&viewing_status=2&date_from=2024-01-01&date_to=2024-12-31
 ```
 
 ### 响应结果
-
-#### 成功响应
 
 ```json
 {
@@ -382,69 +322,6 @@ GET /api/external/viewing-records/agent_user_12345?page=1&pageSize=10&property_n
   }
 }
 ```
-
-#### 错误响应
-
-```json
-{
-  "success": false,
-  "error": "userId为必填参数",
-  "message": "请求参数验证失败"
-}
-```
-
----
-
-## 🔧 接口使用指南
-
-### 推荐使用流程
-
-#### 方案一：先录入客户，再录入带看记录
-
-```
-1. POST /api/external/customers (录入客户基础信息)
-2. POST /api/external/viewing-records (录入带看记录)
-3. GET /api/external/viewing-records/[userId] (查询用户带看记录)
-```
-
-#### 方案二：直接录入带看记录（推荐）
-
-```
-1. POST /api/external/viewing-records (一次性处理客户和带看记录)
-2. GET /api/external/viewing-records/[userId] (查询用户带看记录)
-```
-
-#### 方案三：纯查询场景
-
-```
-1. GET /api/external/viewing-records/[userId] (查询指定用户的带看记录)
-```
-
-### 数据一致性保证
-
-1. **客户信息更新策略**: 使用`COALESCE`函数，只有新值不为空时才更新
-2. **统计信息自动计算**: 带看记录创建后自动更新客户的带看次数和总佣金
-3. **历史数据快照**: 带看记录中保存客户姓名和电话的快照
-4. **客户状态联动**: 根据带看反馈自动更新客户状态
-
-### 错误处理
-
-#### 常见错误码
-
-- `400`: 请求参数验证失败
-- `500`: 服务器内部错误
-
-#### 重试策略
-
-- 建议指数退避重试
-- 最大重试次数：3 次
-- 重试间隔：1s, 2s, 4s
-
-### 性能建议
-
-1. **批量操作**: 如需录入大量数据，建议控制并发请求数量（不超过 10 个/秒）
-2. **数据完整性**: 尽量提供完整的字段信息，避免频繁更新
-3. **幂等性**: 相同的 userId 可以重复调用，系统会智能判断创建或更新
 
 ---
 
@@ -517,7 +394,7 @@ GET /api/external/viewing-records/agent_user_12345?page=1&pageSize=10&property_n
 
 ```bash
 # 创建新客户
-curl -X POST http://localhost:3000/api/external/customers \
+curl -X POST https://your-domain.com/api/external/customers \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "agent_user_12345",
@@ -538,7 +415,7 @@ curl -X POST http://localhost:3000/api/external/customers \
   }'
 
 # 更新现有客户（相同userId）
-curl -X POST http://localhost:3000/api/external/customers \
+curl -X POST https://your-domain.com/api/external/customers \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "agent_user_12345",
@@ -550,11 +427,11 @@ curl -X POST http://localhost:3000/api/external/customers \
   }'
 ```
 
-#### 2. 带看记录录入接口（智能客户处理 + 外部房源信息自动查询）
+#### 2. 带看记录录入接口
 
 ```bash
-# 自动房源查询示例 - 只提供物业地址，系统自动查询详细信息
-curl -X POST http://localhost:3000/api/external/viewing-records \
+# 自动房源查询示例
+curl -X POST https://your-domain.com/api/external/viewing-records \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "agent_user_67890",
@@ -573,34 +450,59 @@ curl -X POST http://localhost:3000/api/external/viewing-records \
     "business_type": "whole_rent",
     "notes": "客户很满意，准备签约"
   }'
-
-# 房源查询 + 手动数据混合 - 系统会优先使用外部查询数据
-curl -X POST http://localhost:3000/api/external/viewing-records \
-  -H "Content-Type: application/json" \
-  -d '{
-    "userId": "agent_user_99999",
-    "customer_name": "王五",
-    "property_name": "万科城",
-    "property_address": "2栋1单元502室",
-    "viewing_time": "2024-08-16T10:00:00.000Z",
-    "commission": 2500,
-    "viewing_feedback": 0,
-    "notes": "客户觉得价格偏高"
-  }'
 ```
 
 #### 3. 用户带看记录查询接口
 
 ```bash
 # 基础查询
-curl -X GET "http://localhost:3000/api/external/viewing-records/agent_user_12345"
+curl -X GET "https://your-domain.com/api/external/viewing-records/agent_user_12345"
 
 # 带筛选条件的查询
-curl -X GET "http://localhost:3000/api/external/viewing-records/agent_user_12345?page=1&pageSize=10&property_name=万科&viewing_status=2&date_from=2024-01-01&date_to=2024-12-31"
+curl -X GET "https://your-domain.com/api/external/viewing-records/agent_user_12345?page=1&pageSize=10&property_name=万科&viewing_status=2&date_from=2024-01-01&date_to=2024-12-31"
 
 # 使用jq解析响应
-curl -s -X GET "http://localhost:3000/api/external/viewing-records/agent_user_12345" | jq '.data.viewing_records | length'
+curl -s -X GET "https://your-domain.com/api/external/viewing-records/agent_user_12345" | jq '.data.data | length'
 ```
+
+---
+
+## 🔧 使用指南
+
+### 推荐使用流程
+
+#### 方案一：先录入客户，再录入带看记录
+
+```
+1. POST /api/external/customers (录入客户基础信息)
+2. POST /api/external/viewing-records (录入带看记录)
+3. GET /api/external/viewing-records/[userId] (查询用户带看记录)
+```
+
+#### 方案二：直接录入带看记录（推荐）
+
+```
+1. POST /api/external/viewing-records (一次性处理客户和带看记录)
+2. GET /api/external/viewing-records/[userId] (查询用户带看记录)
+```
+
+### 数据一致性保证
+
+1. **客户信息更新策略**: 使用`COALESCE`函数，只有新值不为空时才更新
+2. **统计信息自动计算**: 带看记录创建后自动更新客户的带看次数和总佣金
+3. **历史数据快照**: 带看记录中保存客户姓名和电话的快照
+4. **客户状态联动**: 根据带看反馈自动更新客户状态
+
+### 错误处理
+
+- **常见错误码**: 400 (参数验证失败), 500 (服务器内部错误)
+- **重试策略**: 建议指数退避重试，最大重试次数 3 次，重试间隔 1s, 2s, 4s
+
+### 性能建议
+
+1. **批量操作**: 控制并发请求数量（不超过 10 个/秒）
+2. **数据完整性**: 尽量提供完整的字段信息，避免频繁更新
+3. **幂等性**: 相同的 userId 可以重复调用，系统会智能判断创建或更新
 
 ---
 
@@ -625,6 +527,58 @@ A: 系统使用数据库事务和 `COALESCE` 函数确保数据一致性，同�
 ### Q5: 支持批量操作吗？
 
 A: 目前接口设计为单条记录操作，建议控制并发请求数量（不超过 10 个/秒）以确保系统稳定性。
+
+### Q6: 如何获取系统统计数据？
+
+A: 使用 `GET /api/external/statistics` 接口可以获取约看数量、客户成交状态统计和佣金总金额等关键业务指标。详细文档请参考《外部统计接口文档》。
+
+---
+
+## 📊 4. 统计数据查询接口
+
+### 基本信息
+
+- **接口地址**: `GET /api/external/statistics`
+- **功能描述**: 获取系统统计数据，包括约看数量、客户成交状态统计和佣金总金额
+- **数据来源**: 带看记录表和客户表
+
+### 请求参数
+
+| 参数名      | 类型   | 必填 | 默认值 | 说明                       |
+| ----------- | ------ | ---- | ------ | -------------------------- |
+| `date_from` | string | ❌   | -      | 开始日期，格式：YYYY-MM-DD |
+| `date_to`   | string | ❌   | -      | 结束日期，格式：YYYY-MM-DD |
+
+### 响应示例
+
+```json
+{
+  "success": true,
+  "data": {
+    "viewing_count": 150,
+    "completed_unpaid_count": 25,
+    "completed_paid_count": 10,
+    "total_commission": 125000.0,
+    "period": {
+      "date_from": "2024-01-01",
+      "date_to": "2024-01-31"
+    }
+  },
+  "message": "统计数据获取成功"
+}
+```
+
+### 使用示例
+
+```bash
+# 查询所有数据（默认）
+curl -X GET "http://localhost:3000/api/external/statistics"
+
+# 查询指定时间范围
+curl -X GET "http://localhost:3000/api/external/statistics?date_from=2024-01-01&date_to=2024-01-31"
+```
+
+> 📖 **详细文档**: 更多详细信息请参考 [外部统计接口文档](./外部统计接口文档.md)
 
 ---
 
